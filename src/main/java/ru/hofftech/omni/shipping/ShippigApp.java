@@ -9,29 +9,18 @@ import main.java.ru.hofftech.omni.shipping.services.PackageLoader;
 import main.java.ru.hofftech.omni.shipping.services.PackageValidator;
 import main.java.ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 /**
  * Главный класс программы для упаковки посылок в кузовы грузовиков
  */
 public class ShippigApp {
-    private static final Logger logger = Logger.getLogger(ShippigApp.class.getName());
-
-    static {
-        // Настройка логирования
-        Logger rootLogger = Logger.getLogger("");
-        rootLogger.setLevel(Level.INFO);
-        ConsoleHandler handler = new ConsoleHandler();
-        handler.setLevel(Level.INFO);
-        handler.setFormatter(new SimpleFormatter());
-        rootLogger.addHandler(handler);
-    }
+    private static final Logger logger = LoggerFactory.getLogger(ShippigApp.class);
 
     public static void main(String[] args) {
         System.out.println("Предоставленные аргументы: "+Arrays.toString(args));
@@ -47,8 +36,8 @@ public class ShippigApp {
         String algorithmType = args.length > 3 ? args[3] : "simple";
 
         logger.info("Запуск программы упаковки посылок");
-        logger.info("Файл: " + filePath);
-        logger.info("Алгоритм: " + algorithmType);
+        logger.info("Файл: {}", filePath);
+        logger.info("Алгоритм: {}", algorithmType);
 
         try {
             // Загрузка посылок
@@ -56,7 +45,7 @@ public class ShippigApp {
 
             if (packages.isEmpty()) {
                 System.err.println("Файл не содержит посылок");
-                logger.warning("Файл не содержит посылок");
+                logger.warn("Файл не содержит посылок");
                 System.exit(1);
             }
 
@@ -67,7 +56,7 @@ public class ShippigApp {
             if (!validation.isValid()) {
                 System.err.println("Ошибки валидации:");
                 System.err.println(validation.getErrorMessage());
-                logger.severe("Валидация не пройдена");
+                logger.error("Валидация не пройдена");
                 System.exit(1);
             }
 
@@ -79,7 +68,7 @@ public class ShippigApp {
                 algorithm = new SimplePackingAlgorithm();
             }
 
-            logger.info("Используется алгоритм: " + algorithm.getName());
+            logger.info("Используется алгоритм: {}", algorithm.getName());
 
             // Упаковка
             Truck.resetIdCounter();
@@ -100,13 +89,11 @@ public class ShippigApp {
 
         } catch (IOException e) {
             System.err.println("Ошибка при чтении файла: " + e.getMessage());
-            logger.severe("Ошибка при чтении файла: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Ошибка при чтении файла: {}", e.getMessage(), e);
             System.exit(1);
         } catch (Exception e) {
             System.err.println("Неожиданная ошибка: " + e.getMessage());
-            logger.severe("Неожиданная ошибка: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Неожиданная ошибка: {}", e.getMessage(), e);
             System.exit(1);
         }
     }

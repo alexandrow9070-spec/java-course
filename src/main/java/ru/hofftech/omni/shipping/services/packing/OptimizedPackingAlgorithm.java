@@ -6,13 +6,15 @@ import ru.hofftech.omni.shipping.entities.Truck;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Оптимизированный алгоритм: пытается разместить несколько посылок в один кузов
  */
-public class OptimizedPackingAlgorithm implements PackingAlgorithm {
-    private static final Logger logger = Logger.getLogger(OptimizedPackingAlgorithm.class.getName());
+ public class OptimizedPackingAlgorithm implements PackingAlgorithm {
+    private static final Logger logger = LoggerFactory.getLogger(OptimizedPackingAlgorithm.class);
 
     @Override
     public String getName() {
@@ -21,7 +23,7 @@ public class OptimizedPackingAlgorithm implements PackingAlgorithm {
 
     @Override
     public List<Truck> pack(List<Package> packages, int truckWidth, int truckHeight) {
-        logger.info("Начало упаковки по оптимизированному алгоритму. Посылок: " + packages.size());
+        logger.info("Начало упаковки по оптимизированному алгоритму. Посылок: {}", packages.size());
         
         List<Truck> trucks = new ArrayList<>();
         List<Package> remainingPackages = new ArrayList<>(packages);
@@ -36,7 +38,7 @@ public class OptimizedPackingAlgorithm implements PackingAlgorithm {
                 
                 if (truck.tryPlacePackage(pkg)) {
                     placedInThisTruck.add(pkg);
-                    logger.fine("Посылка " + pkg + " размещена в кузове " + truck.getId());
+                    logger.debug("Посылка {} размещена в кузове {}", pkg, truck.getId());
                 }
             }
             
@@ -45,15 +47,15 @@ public class OptimizedPackingAlgorithm implements PackingAlgorithm {
             
             if (!placedInThisTruck.isEmpty()) {
                 trucks.add(truck);
-                logger.fine("Кузов " + truck.getId() + " заполнен. Посылок в кузове: " + placedInThisTruck.size());
+                logger.debug("Кузов {} заполнен. Посылок в кузове: {}", truck.getId(), placedInThisTruck.size());
             } else {
                 // Если не удалось разместить ни одну посылку, это ошибка
-                logger.severe("Не удалось разместить посылку в новый кузов!");
+                logger.error("Не удалось разместить посылку в новый кузов!");
                 break;
             }
         }
         
-        logger.info("Упаковка завершена. Использовано кузовов: " + trucks.size());
+        logger.info("Упаковка завершена. Использовано кузовов: {}", trucks.size());
         return trucks;
     }
 }

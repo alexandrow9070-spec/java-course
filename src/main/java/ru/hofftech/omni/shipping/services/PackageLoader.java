@@ -7,19 +7,21 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Класс для загрузки посылок из файла
  */
-public class PackageLoader {
-    private static final Logger logger = Logger.getLogger(PackageLoader.class.getName());
+ public class PackageLoader {
+    private static final Logger logger = LoggerFactory.getLogger(PackageLoader.class);
 
     /**
      * Загружает посылки из файла
      */
     public static List<Package> loadPackages(String filePath) throws IOException {
-        logger.info("Начало загрузки посылок из файла: " + filePath);
+        logger.info("Начало загрузки посылок из файла: {}", filePath);
         
         List<Package> packages = new ArrayList<>();
         List<String> currentShape = new ArrayList<>();
@@ -38,7 +40,7 @@ public class PackageLoader {
                         Package pkg = createPackage(currentShape);
                         if (pkg != null) {
                             packages.add(pkg);
-                            logger.fine("Загружена посылка: " + pkg);
+                            logger.debug("Загружена посылка: {}", pkg);
                         }
                         currentShape.clear();
                     }
@@ -52,12 +54,12 @@ public class PackageLoader {
                 ru.hofftech.omni.shipping.entities.Package pkg = createPackage(currentShape);
                 if (pkg != null) {
                     packages.add(pkg);
-                    logger.fine("Загружена посылка: " + pkg);
+                    logger.debug("Загружена посылка: {}", pkg);
                 }
             }
         }
         
-        logger.info("Загружено посылок: " + packages.size());
+        logger.info("Загружено посылок: {}", packages.size());
         return packages;
     }
 

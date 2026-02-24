@@ -6,13 +6,15 @@ import ru.hofftech.omni.shipping.entities.Truck;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Простой алгоритм: одна посылка - одна машина
  */
-public class SimplePackingAlgorithm implements PackingAlgorithm {
-    private static final Logger logger = Logger.getLogger(SimplePackingAlgorithm.class.getName());
+ public class SimplePackingAlgorithm implements PackingAlgorithm {
+    private static final Logger logger = LoggerFactory.getLogger(SimplePackingAlgorithm.class);
 
     @Override
     public String getName() {
@@ -21,7 +23,7 @@ public class SimplePackingAlgorithm implements PackingAlgorithm {
 
     @Override
     public List<Truck> pack(List<Package> packages, int truckWidth, int truckHeight) {
-        logger.info("Начало упаковки по простому алгоритму. Посылок: " + packages.size());
+        logger.info("Начало упаковки по простому алгоритму. Посылок: {}", packages.size());
         
         List<Truck> trucks = new ArrayList<>();
         
@@ -36,13 +38,13 @@ public class SimplePackingAlgorithm implements PackingAlgorithm {
                 pkg.placeIn(truck, x, y);
                 truck.addPackage(pkg);
                 trucks.add(truck);
-                logger.fine("Посылка " + pkg + " размещена в кузове " + truck.getId());
+                logger.debug("Посылка {} размещена в кузове {}", pkg, truck.getId());
             } else {
-                logger.warning("Не удалось разместить посылку " + pkg + " в кузове");
+                logger.warn("Не удалось разместить посылку {} в кузове", pkg);
             }
         }
         
-        logger.info("Упаковка завершена. Использовано кузовов: " + trucks.size());
+        logger.info("Упаковка завершена. Использовано кузовов: {}", trucks.size());
         return trucks;
     }
 }

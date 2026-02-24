@@ -4,19 +4,21 @@ import ru.hofftech.omni.shipping.entities.Package;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Класс для валидации посылок
  */
-public class PackageValidator {
-    private static final Logger logger = Logger.getLogger(PackageValidator.class.getName());
+ public class PackageValidator {
+    private static final Logger logger = LoggerFactory.getLogger(PackageValidator.class);
 
     /**
      * Валидирует список посылок
      */
     public static ValidationResult validate(List<Package> packages, int truckWidth, int truckHeight) {
-        logger.info("Начало валидации посылок. Всего посылок: " + packages.size());
+        logger.info("Начало валидации посылок. Всего посылок: {}", packages.size());
         
         ValidationResult result = new ValidationResult();
         
@@ -31,7 +33,7 @@ public class PackageValidator {
         if (result.isValid()) {
             logger.info("Валидация пройдена успешно");
         } else {
-            logger.warning("Валидация не пройдена. Ошибок: " + result.getErrors().size());
+            logger.warn("Валидация не пройдена. Ошибок: {}", result.getErrors().size());
         }
         
         return result;

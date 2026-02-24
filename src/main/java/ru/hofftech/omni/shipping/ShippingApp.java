@@ -1,13 +1,13 @@
 
-package main.java.ru.hofftech.omni.shipping;
+package ru.hofftech.omni.shipping;
 
-import main.java.ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
-import main.java.ru.hofftech.omni.shipping.entities.Package;
-import main.java.ru.hofftech.omni.shipping.entities.Truck;
-import main.java.ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
-import main.java.ru.hofftech.omni.shipping.services.PackageLoader;
-import main.java.ru.hofftech.omni.shipping.services.PackageValidator;
-import main.java.ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
+import ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
+import ru.hofftech.omni.shipping.entities.Package;
+import ru.hofftech.omni.shipping.entities.Truck;
+import ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
+import ru.hofftech.omni.shipping.services.PackageLoader;
+import ru.hofftech.omni.shipping.services.PackageValidator;
+import ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +19,8 @@ import java.util.List;
 /**
  * Главный класс программы для упаковки посылок в кузовы грузовиков
  */
-public class ShippigApp {
-    private static final Logger logger = LoggerFactory.getLogger(ShippigApp.class);
+public class ShippingApp {
+    private static final Logger logger = LoggerFactory.getLogger(ShippingApp.class);
 
     public static void main(String[] args) {
         System.out.println("Предоставленные аргументы: "+Arrays.toString(args));

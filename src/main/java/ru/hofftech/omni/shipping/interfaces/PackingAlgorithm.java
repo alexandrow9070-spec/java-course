@@ -1,7 +1,7 @@
-package main.java.ru.hofftech.omni.shipping.interfaces;
+package ru.hofftech.omni.shipping.interfaces;
 
-import main.java.ru.hofftech.omni.shipping.entities.Package;
-import main.java.ru.hofftech.omni.shipping.entities.Truck;
+import ru.hofftech.omni.shipping.entities.Package;
+import ru.hofftech.omni.shipping.entities.Truck;
 
 import java.util.List;
 

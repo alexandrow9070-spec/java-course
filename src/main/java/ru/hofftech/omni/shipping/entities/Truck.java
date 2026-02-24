@@ -1,4 +1,4 @@
-package main.java.ru.hofftech.omni.shipping.entities;
+package ru.hofftech.omni.shipping.entities;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,7 +13,7 @@ public class Truck {
     private final int width;
     private final int height;
     private final char[][] cargo;
-    private final List<main.java.ru.hofftech.omni.shipping.entities.Package> packages;
+    private final List<Package> packages;
 
     public Truck(int width, int height) {
         this.id = nextId++;
@@ -62,18 +62,18 @@ public class Truck {
         return cargo[y][x];
     }
 
-    public void addPackage(main.java.ru.hofftech.omni.shipping.entities.Package pkg) {
+    public void addPackage(Package pkg) {
         packages.add(pkg);
     }
 
-    public List<main.java.ru.hofftech.omni.shipping.entities.Package> getPackages() {
+    public List<Package> getPackages() {
         return new ArrayList<>(packages);
     }
 
     /**
      * Проверяет, есть ли свободное место для размещения посылки
      */
-    public boolean hasSpaceFor(main.java.ru.hofftech.omni.shipping.entities.Package pkg) {
+    public boolean hasSpaceFor(Package pkg) {
         for (int y = 0; y <= height - pkg.getHeight(); y++) {
             for (int x = 0; x <= width - pkg.getWidth(); x++) {
                 if (pkg.canBePlacedAt(this, x, y)) {

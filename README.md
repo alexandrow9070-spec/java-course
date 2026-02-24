@@ -78,7 +78,7 @@ java -cp src Main <путь_к_файлу> [ширина кузова] [высо
 ### Пример
 
 ```bash
-java -cp src ShippigApp test-input.txt 6 6 optimized
+java -cp src ShippingApp test-input.txt 6 6 optimized
 ```
 
 ### Формат входного файла
@@ -126,7 +126,7 @@ java -cp src ShippingTests
 
 ## Логирование
 
-Программа использует Java Logging API для подробного логирования процесса упаковки. Уровень логирования можно настроить в классе `Main`.
+Программа использует Java Logging API для подробного логирования процесса упаковки. Уровень логирования можно настроить в классе `[ShippingApp.java](src/main/java/ru/hofftech/omni/shipping/ShippingApp.java)`.
 
 ## Пример вывода
 

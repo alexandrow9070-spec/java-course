@@ -1,6 +1,6 @@
-package main.java.ru.hofftech.omni.shipping.services;
+package ru.hofftech.omni.shipping.services;
 
-import main.java.ru.hofftech.omni.shipping.entities.Package;
+import ru.hofftech.omni.shipping.entities.Package;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,13 +15,13 @@ public class PackageValidator {
     /**
      * Валидирует список посылок
      */
-    public static ValidationResult validate(List<main.java.ru.hofftech.omni.shipping.entities.Package> packages, int truckWidth, int truckHeight) {
+    public static ValidationResult validate(List<Package> packages, int truckWidth, int truckHeight) {
         logger.info("Начало валидации посылок. Всего посылок: " + packages.size());
         
         ValidationResult result = new ValidationResult();
         
         for (int i = 0; i < packages.size(); i++) {
-            main.java.ru.hofftech.omni.shipping.entities.Package pkg = packages.get(i);
+            Package pkg = packages.get(i);
             String error = validatePackage(pkg, truckWidth, truckHeight, i);
             if (error != null) {
                 result.addError("Посылка #" + (i + 1) + ": " + error);

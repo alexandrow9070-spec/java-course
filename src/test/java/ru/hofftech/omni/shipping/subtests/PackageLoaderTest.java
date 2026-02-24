@@ -1,7 +1,7 @@
-package test.java.ru.hofftech.omni.shipping.subtests;
+package ru.hofftech.omni.shipping.subtests;
 
-import main.java.ru.hofftech.omni.shipping.entities.Package;
-import main.java.ru.hofftech.omni.shipping.services.PackageLoader;
+import ru.hofftech.omni.shipping.entities.Package;
+import ru.hofftech.omni.shipping.services.PackageLoader;
 
 import java.io.FileWriter;
 import java.io.IOException;

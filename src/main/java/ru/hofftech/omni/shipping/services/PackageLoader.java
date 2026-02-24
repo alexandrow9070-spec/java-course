@@ -1,6 +1,6 @@
-package main.java.ru.hofftech.omni.shipping.services;
+package ru.hofftech.omni.shipping.services;
 
-import main.java.ru.hofftech.omni.shipping.entities.Package;
+import ru.hofftech.omni.shipping.entities.Package;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -18,10 +18,10 @@ public class PackageLoader {
     /**
      * Загружает посылки из файла
      */
-    public static List<main.java.ru.hofftech.omni.shipping.entities.Package> loadPackages(String filePath) throws IOException {
+    public static List<Package> loadPackages(String filePath) throws IOException {
         logger.info("Начало загрузки посылок из файла: " + filePath);
         
-        List<main.java.ru.hofftech.omni.shipping.entities.Package> packages = new ArrayList<>();
+        List<Package> packages = new ArrayList<>();
         List<String> currentShape = new ArrayList<>();
         
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
@@ -35,7 +35,7 @@ public class PackageLoader {
                 if (line.isEmpty()) {
                     // Пустая строка означает конец текущей посылки
                     if (!currentShape.isEmpty()) {
-                        main.java.ru.hofftech.omni.shipping.entities.Package pkg = createPackage(currentShape);
+                        Package pkg = createPackage(currentShape);
                         if (pkg != null) {
                             packages.add(pkg);
                             logger.fine("Загружена посылка: " + pkg);
@@ -49,7 +49,7 @@ public class PackageLoader {
             
             // Обработка последней посылки, если файл не заканчивается пустой строкой
             if (!currentShape.isEmpty()) {
-                main.java.ru.hofftech.omni.shipping.entities.Package pkg = createPackage(currentShape);
+                ru.hofftech.omni.shipping.entities.Package pkg = createPackage(currentShape);
                 if (pkg != null) {
                     packages.add(pkg);
                     logger.fine("Загружена посылка: " + pkg);
@@ -64,7 +64,7 @@ public class PackageLoader {
     /**
      * Создает посылку из списка строк
      */
-    private static main.java.ru.hofftech.omni.shipping.entities.Package createPackage(List<String> shape) {
+    private static Package createPackage(List<String> shape) {
         if (shape.isEmpty()) {
             return null;
         }

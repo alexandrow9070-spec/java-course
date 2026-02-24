@@ -1,4 +1,4 @@
-package main.java.ru.hofftech.omni.shipping.entities;
+package ru.hofftech.omni.shipping.entities;
 
 import java.util.ArrayList;
 import java.util.List;

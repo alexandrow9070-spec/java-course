@@ -1,9 +1,9 @@
-package test.java.ru.hofftech.omni.shipping.subtests;
+package ru.hofftech.omni.shipping.subtests;
 
-import main.java.ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
-import main.java.ru.hofftech.omni.shipping.entities.Package;
-import main.java.ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
-import main.java.ru.hofftech.omni.shipping.entities.Truck;
+import ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
+import ru.hofftech.omni.shipping.entities.Package;
+import ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
+import ru.hofftech.omni.shipping.entities.Truck;
 
 import java.util.ArrayList;
 import java.util.List;

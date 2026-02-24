@@ -1,8 +1,8 @@
-package main.java.ru.hofftech.omni.shipping.services.packing;
+package ru.hofftech.omni.shipping.services.packing;
 
-import main.java.ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
-import main.java.ru.hofftech.omni.shipping.entities.Package;
-import main.java.ru.hofftech.omni.shipping.entities.Truck;
+import ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
+import ru.hofftech.omni.shipping.entities.Package;
+import ru.hofftech.omni.shipping.entities.Truck;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -20,15 +20,15 @@ public class OptimizedPackingAlgorithm implements PackingAlgorithm {
     }
 
     @Override
-    public List<Truck> pack(List<main.java.ru.hofftech.omni.shipping.entities.Package> packages, int truckWidth, int truckHeight) {
+    public List<Truck> pack(List<Package> packages, int truckWidth, int truckHeight) {
         logger.info("Начало упаковки по оптимизированному алгоритму. Посылок: " + packages.size());
         
         List<Truck> trucks = new ArrayList<>();
-        List<main.java.ru.hofftech.omni.shipping.entities.Package> remainingPackages = new ArrayList<>(packages);
+        List<Package> remainingPackages = new ArrayList<>(packages);
         
         while (!remainingPackages.isEmpty()) {
             Truck truck = new Truck(truckWidth, truckHeight);
-            List<main.java.ru.hofftech.omni.shipping.entities.Package> placedInThisTruck = new ArrayList<>();
+            List<Package> placedInThisTruck = new ArrayList<>();
             
             // Пытаемся разместить посылки в текущем кузове
             for (int i = 0; i < remainingPackages.size(); i++) {

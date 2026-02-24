@@ -13,6 +13,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.PrintStream;
+import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.List;
 
@@ -22,7 +24,10 @@ import java.util.List;
 public class ShippingApp {
     private static final Logger logger = LoggerFactory.getLogger(ShippingApp.class);
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws UnsupportedEncodingException {
+        //явно указываем кодировку вывода
+        System.setOut(new PrintStream(System.out, true, "UTF-8"));
+
         System.out.println("Предоставленные аргументы: "+Arrays.toString(args));
         if (args.length < 4) {
             System.err.println("Использование: java Main <путь_к_файлу> <ширина_кузова> <высота_кузова> [алгоритм]");

@@ -15,8 +15,13 @@
 # Build directories
 out/
 build/
-target/
 bin/
+
+# Gradle
+.gradle/
+gradle/
+gradlew
+gradlew.bat
 
 # OS files
 .DS_Store

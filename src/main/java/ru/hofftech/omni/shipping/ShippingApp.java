@@ -25,7 +25,7 @@ import java.util.List;
 public class ShippingApp {
     private static final Logger logger = LoggerFactory.getLogger(ShippingApp.class);
 
-    public static void main(String[] args) throws UnsupportedEncodingException {
+    public static void main(String[] args) {
 
         //явно указываем кодировку вывода
         System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));

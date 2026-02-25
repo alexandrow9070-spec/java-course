@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 
@@ -25,20 +26,22 @@ public class ShippingApp {
     private static final Logger logger = LoggerFactory.getLogger(ShippingApp.class);
 
     public static void main(String[] args) throws UnsupportedEncodingException {
+
         //явно указываем кодировку вывода
-        System.setOut(new PrintStream(System.out, true, "UTF-8"));
+        System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
+        System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
 
         System.out.println("Предоставленные аргументы: "+Arrays.toString(args));
         if (args.length < 4) {
             System.err.println("Использование: java Main <путь_к_файлу> <ширина_кузова> <высота_кузова> [алгоритм]");
-            System.err.println("Алгоритмы: simple (по умолчанию) или optimized");
+            System.err.println("Алгоритмы: simple или optimized");
             System.exit(1);
         }
 
         String filePath = args[0];
         int truckWidth = Integer.parseInt(args[1]);
         int truckHeight = Integer.parseInt(args[2]);
-        String algorithmType = args.length > 3 ? args[3] : "simple";
+        String algorithmType = args[3];
 
         logger.info("Запуск программы упаковки посылок");
         logger.info("Файл: {}", filePath);

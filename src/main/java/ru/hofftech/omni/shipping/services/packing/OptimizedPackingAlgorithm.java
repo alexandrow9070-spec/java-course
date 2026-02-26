@@ -17,18 +17,32 @@ import org.slf4j.LoggerFactory;
     private static final Logger logger = LoggerFactory.getLogger(OptimizedPackingAlgorithm.class);
 
     @Override
+    public String getCode() {
+        return "optimized";
+    }
+
+    @Override
     public String getName() {
         return "Оптимизированный алгоритм";
     }
 
     @Override
-    public List<Truck> pack(List<Package> packages, int truckWidth, int truckHeight) {
+    public List<Truck> pack(List<Package> packages, int truckWidth, int truckHeight, int maxTrucks) {
         logger.info("Начало упаковки по оптимизированному алгоритму. Посылок: {}", packages.size());
         
+        if (maxTrucks <= 0) {
+            throw new IllegalArgumentException("Максимальное количество машин должно быть положительным");
+        }
+
         List<Truck> trucks = new ArrayList<>();
         List<Package> remainingPackages = new ArrayList<>(packages);
         
         while (!remainingPackages.isEmpty()) {
+            if (trucks.size() >= maxTrucks) {
+                logger.error("Исчерпано доступное количество машин: доступно {}, осталось посылок {}", maxTrucks, remainingPackages.size());
+                throw new IllegalStateException("Недостаточно машин для погрузки всех посылок оптимизированным алгоритмом");
+            }
+
             Truck truck = new Truck(truckWidth, truckHeight);
             List<Package> placedInThisTruck = new ArrayList<>();
             

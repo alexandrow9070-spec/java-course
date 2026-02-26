@@ -17,11 +17,18 @@ repositories {
 }
 
 dependencies {
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.18.2'
+
     implementation 'org.slf4j:slf4j-api:1.7.36'
     implementation 'ch.qos.logback:logback-classic:1.2.12'
+
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach {
+    //options.encoding = 'UTF-8'
 }
 
 test {
@@ -31,8 +38,16 @@ test {
 application {
     // Главный класс приложения
     mainClass = 'ru.hofftech.omni.shipping.ShippingApp'
+
 }
 
 run {
-    args 'test-input.txt', 6, 6,'optimized'
+    args 'test-input.txt', 6, 6, 'optimized', 10
+}
+
+tasks.register('runJsonToPackages', JavaExec) {
+    group = 'application'
+    description = 'Конвертирует JSON с результатом погрузки в текстовый файл с посылками'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ru.hofftech.omni.shipping.JsonToPackagesApp'
 }

@@ -17,14 +17,28 @@ import org.slf4j.LoggerFactory;
     private static final Logger logger = LoggerFactory.getLogger(SimplePackingAlgorithm.class);
 
     @Override
+    public String getCode() {
+        return "simple";
+    }
+
+    @Override
     public String getName() {
         return "Простой алгоритм (одна посылка - одна машина)";
     }
 
     @Override
-    public List<Truck> pack(List<Package> packages, int truckWidth, int truckHeight) {
+    public List<Truck> pack(List<Package> packages, int truckWidth, int truckHeight, int maxTrucks) {
         logger.info("Начало упаковки по простому алгоритму. Посылок: {}", packages.size());
         
+        if (maxTrucks <= 0) {
+            throw new IllegalArgumentException("Максимальное количество машин должно быть положительным");
+        }
+
+        if (packages.size() > maxTrucks) {
+            logger.error("Недостаточно машин: посылок {}, доступно машин {}", packages.size(), maxTrucks);
+            throw new IllegalStateException("Недостаточно машин для погрузки всех посылок простым алгоритмом");
+        }
+
         List<Truck> trucks = new ArrayList<>();
         
         for (Package pkg : packages) {

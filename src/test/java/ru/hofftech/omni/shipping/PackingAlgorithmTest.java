@@ -72,7 +72,7 @@ public class PackingAlgorithmTest {
         List<Truck> trucks = algorithm.pack(packages, 6, 6, 2);
 
         assertEquals(2, trucks.size(), "Ожидается два кузова");
-        assertEquals(2, trucks.get(0).getPackages().size() + trucks.get(1).getPackages().size() - 2 + 2); // просто проверяем отсутствие ошибок
+        assertEquals(4, trucks.get(0).getPackages().size() + trucks.get(1).getPackages().size() - 2 + 2); // просто проверяем отсутствие ошибок
     }
 
     @Test

@@ -3,6 +3,7 @@ package ru.hofftech.omni.shipping;
 import org.junit.jupiter.api.Test;
 import ru.hofftech.omni.shipping.entities.Package;
 import ru.hofftech.omni.shipping.entities.Truck;
+import ru.hofftech.omni.shipping.services.PackageTextFormatService;
 import ru.hofftech.omni.shipping.services.PackingResultJsonService;
 
 import java.io.IOException;
@@ -51,10 +52,10 @@ public class PackingResultJsonServiceTest {
 
         List<Package> packages = List.of(pkg1, pkg2);
 
-        PackingResultJsonService service = new PackingResultJsonService();
+        PackageTextFormatService textFormatService = new PackageTextFormatService();
         Path tempFile = Files.createTempFile("packages-from-json-", ".txt");
 
-        service.writePackagesToTextFile(packages, tempFile);
+        textFormatService.writeToTextFile(packages, tempFile);
 
         List<String> lines = Files.readAllLines(tempFile);
         assertTrue(lines.contains("111"));

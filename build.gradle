@@ -51,3 +51,32 @@ tasks.register('runJsonToPackages', JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = 'ru.hofftech.omni.shipping.JsonToPackagesApp'
 }
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': 'ru.hofftech.omni.shipping.JsonToPackagesApp'
+        )
+    }
+}
+
+tasks.register('fatJar', Jar) {
+    group = 'build'
+    description = 'Собирает исполняемый jar со всеми зависимостями'
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    manifest {
+        attributes(
+                'Main-Class': 'ru.hofftech.omni.shipping.JsonToPackagesApp'
+        )
+    }
+
+    from sourceSets.main.output
+    dependsOn configurations.runtimeClasspath
+    from {
+        configurations.runtimeClasspath
+                .findAll { it.name.endsWith('jar') }
+                .collect { zipTree(it) }
+    }
+}

@@ -1,100 +1,158 @@
-# Программа упаковки посылок в кузовы грузовиков
+# Упаковка посылок в кузовы грузовиков
 
-Программа для оптимальной упаковки посылок разного размера и формы в кузовы грузовиков с учетом правил размещения.
+CLI-проект на Java для двух операций:
 
-## Описание
+- упаковка посылок в кузовы (`pack`);
+- обратное преобразование результата погрузки из JSON в текстовый формат посылок (`split`).
 
-Программа принимает на вход файл с описанием посылок и размещает их в кузовах грузовиков размером 6x6, соблюдая следующие правила:
+## Возможности
 
-- Посылки нельзя вращать
-- Посылки не могут висеть в воздухе
-- У посылки должна быть опора больше половины её основания
-- Каждый кузов имеет размер 6x6
+- 4 алгоритма погрузки: `simple`, `optimized`, `even`, `dense`;
+- валидация входных посылок перед погрузкой;
+- сохранение результата погрузки в JSON;
+- восстановление текстового файла посылок из JSON;
+- запуск через Gradle и через исполняемый fat jar.
 
-## Структура проекта
+## Структура (основное)
 
-```
-src
-├───main
-│   └───java
-│       └───ru
-│           └───hofftech
-│               └───omni
-│                   └───shipping
-│                       │   ShippingApp.java # Главный класс программы
-│                       │   
-│                       ├───entities
-│                       │       Package.java  # Класс для представления посылки
-│                       │       Truck.java  # Класс для представления кузова грузовика
-│                       │       
-│                       ├───interfaces
-│                       │       PackingAlgorithm.java # Интерфейс алгоритмов упаковки
-│                       │       
-│                       └───services
-│                           │   PackageLoader.java   # Загрузка посылок из файла
-│                           │   PackageValidator.java # Валидация входных данных
-│                           │   
-│                           └───packing
-│                                   OptimizedPackingAlgorithm.java  # Оптимизированный алгоритм
-│                                   SimplePackingAlgorithm.java # Простой алгоритм (одна посылка - одна машина)
-│                                   
-└───test
-	└───java
-		└───ru
-			└───hofftech
-				└───omni
-					└───shipping
-						│   ShippingTests.java # Тест основной
-						│   
-						└───subtests
-								PackageLoaderTest.java
-								PackageTest.java
-								PackingAlgorithmTest.java
-								TruckTest.java               
+```text
+src/main/java/ru/hofftech/omni/shipping
+├── ShippingApp.java                 # класс погрузки (run)
+├── JsonToPackagesApp.java           # единый CLI с командами pack/split
+├── entities
+│   ├── Package.java
+│   └── Truck.java
+├── interfaces
+│   └── PackingAlgorithm.java
+└── services
+    ├── PackageLoader.java
+    ├── PackageValidator.java
+    ├── PackageTextFormatService.java   # текстовый формат посылок
+    ├── PackingResultJsonService.java   # только JSON
+    └── packing
+        ├── SimplePackingAlgorithm.java
+        ├── OptimizedPackingAlgorithm.java
+        ├── EvenDistributionPackingAlgorithm.java
+        └── DensePackingAlgorithm.java
 ```
 
-## Использование
+## Требования
 
-Проект собирается и запускается через Gradle.
+- JDK 18+
+- рекомендуется использовать Gradle Wrapper (`gradlew`, `gradlew.bat`)
+- консоль с UTF-8
+
+## Быстрый старт
 
 ### Сборка
 
-Находясь в корне проекта:
+```bash
+./gradlew build
+```
+
+Windows:
+
+```powershell
+.\gradlew.bat build
+```
+
+### Запуск тестов
 
 ```bash
-gradle build
+./gradlew test
 ```
 
-### Запуск
+Windows:
 
-Главный класс: `ru.hofftech.omni.shipping.ShippingApp`.
+```powershell
+.\gradlew.bat test
+```
 
-Общий вид команды:
+## Запуск через Gradle
+
+### 1) Погрузка (`pack`) через `ShippingApp`
 
 ```bash
-gradle run --args="<путь_к_файлу> [ширина_кузова] [высота_кузова] [алгоритм]"
+./gradlew run --args="<путь_к_файлу> <ширина_кузова> <высота_кузова> <алгоритм> <количество_машин> [json_файл_результата]"
 ```
 
-Параметры:
-- **`<путь_к_файлу>`** – обязательный параметр, путь к файлу с посылками
-- **`[ширина_кузова]`** – обязательный параметр, ширина кузова (например, `6`)
-- **`[высота_кузова]`** – обязательный параметр, высота кузова (например, `6`)
-- **`[алгоритм]`** – необязательный параметр:
-  - `simple` (по умолчанию) – простой алгоритм (одна посылка — одна машина)
-  - `optimized` – оптимизированный алгоритм (пытается разместить несколько посылок в один кузов)
-
-### Пример
+Пример:
 
 ```bash
-gradle run --args="test-input.txt 6 6 optimized"
+./gradlew run --args="test-input.txt 6 6 dense 10 result.json"
 ```
 
-### Формат входного файла
+### 2) Единый CLI (`pack`/`split`) через `JsonToPackagesApp`
 
-Посылки разделяются пустыми строками. Каждая посылка описывается строками, где символы обозначают содержимое посылки.
-
-Пример (`test-input.txt`):
+```bash
+./gradlew runJsonToPackages --args="pack <путь_к_файлу> <ширина_кузова> <высота_кузова> <алгоритм> <количество_машин> [json_файл_результата]"
+./gradlew runJsonToPackages --args="split <json_вход> <файл_посылок_выход>"
 ```
+
+Примеры:
+
+```bash
+./gradlew runJsonToPackages --args="pack test-input.txt 6 6 optimized 10 result.json"
+./gradlew runJsonToPackages --args="split result.json packages.txt"
+```
+
+Windows:
+
+```powershell
+.\gradlew.bat runJsonToPackages --args="pack test-input.txt 6 6 optimized 10 result.json"
+.\gradlew.bat runJsonToPackages --args="split result.json packages.txt"
+```
+
+## Запуск без Gradle (через jar)
+
+В проекте есть задача `fatJar`, которая собирает исполняемый jar со всеми зависимостями.
+
+### Сборка jar
+
+```bash
+./gradlew fatJar
+```
+
+Windows:
+
+```powershell
+.\gradlew.bat fatJar
+```
+
+Артефакт:
+
+```text
+build/libs/java-course-1.0-SNAPSHOT-all.jar
+```
+
+### Запуск jar
+
+```bash
+java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar pack test-input.txt 6 6 optimized 10 result.json
+java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar split result.json packages.txt
+```
+
+## Аргументы команды `pack`
+
+- `<путь_к_файлу>` — файл с посылками;
+- `<ширина_кузова>` — ширина кузова;
+- `<высота_кузова>` — высота кузова;
+- `<алгоритм>` — `simple` | `optimized` | `even` | `dense`;
+- `<количество_машин>` — максимальное число доступных кузовов;
+- `[json_файл_результата]` — опциональный путь для сохранения JSON.
+
+## Аргументы команды `split`
+
+- `<json_вход>` — JSON-файл результата погрузки;
+- `<файл_посылок_выход>` — выходной текстовый файл посылок.
+
+## Формат входного файла посылок
+
+Каждая посылка — блок строк, блоки разделены пустой строкой.
+
+Пример:
+
+```text
 999
 999
 999
@@ -111,34 +169,23 @@ gradle run --args="test-input.txt 6 6 optimized"
 333
 ```
 
-## Запуск тестов
+## Правила размещения
 
-```bash
-gradle test
-```
+- посылки не вращаются;
+- посылки не должны "висеть в воздухе";
+- опора под основанием должна быть больше половины;
+- размеры посылки не должны превышать размеры кузова.
 
-## Алгоритмы упаковки
+## Алгоритмы
 
-### Простой алгоритм (SimplePackingAlgorithm)
-Каждая посылка размещается в отдельном кузове. Посылка размещается в нижнем левом углу кузова.
+- `simple` — по сути одна посылка на кузов;
+- `optimized` — пытается разместить больше посылок в имеющихся кузовах;
+- `even` — распределяет посылки равномерно по кузовам;
+- `dense` — стремится к максимально плотной упаковке и минимальному числу кузовов.
 
-### Оптимизированный алгоритм (OptimizedPackingAlgorithm)
-Пытается разместить несколько посылок в один кузов, перебирая все посылки и размещая их по возможности.
+## Пример результата
 
-## Валидация
-
-Программа проверяет:
-- Размеры посылок (не должны превышать размер кузова)
-- Корректность формата входных данных
-- Соответствие размеров и формы посылок
-
-## Логирование
-
-Программа использует SLF4J и Logback для подробного логирования процесса упаковки. Конфигурацию логирования можно изменить в файле `logback.xml` (если он добавлен в проект) или в коде, а основной логгер настраивается в классе `[ShippingApp.java](src/main/java/ru/hofftech/omni/shipping/ShippingApp.java)`.
-
-## Пример вывода
-
-```
+```text
 Результат упаковки (Оптимизированный алгоритм):
 Использовано кузовов: 1
 
@@ -151,9 +198,3 @@ gradle test
 +999666+
 ++++++++
 ```
-
-## Требования
-
-- Java 18 или выше
-- Установленный Gradle (или Gradle Wrapper, если вы его добавите в проект)
-- Поддержка UTF-8 для корректного отображения символов в консоли

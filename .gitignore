@@ -29,4 +29,7 @@ Thumbs.db
 
 # Test files
 test-input.txt
+# Test files from readme.md examples
 test-output.txt
+result.json
+packages-from-json.txt

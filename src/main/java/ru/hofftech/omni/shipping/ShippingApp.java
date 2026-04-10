@@ -8,6 +8,9 @@ import ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
 import ru.hofftech.omni.shipping.services.PackageLoader;
 import ru.hofftech.omni.shipping.services.PackageValidator;
 import ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
+import ru.hofftech.omni.shipping.services.packing.EvenDistributionPackingAlgorithm;
+import ru.hofftech.omni.shipping.services.packing.DensePackingAlgorithm;
+import ru.hofftech.omni.shipping.services.PackingResultJsonService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,9 +34,9 @@ public class ShippingApp {
         System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
 
         System.out.println("Предоставленные аргументы: "+Arrays.toString(args));
-        if (args.length < 4) {
-            System.err.println("Использование: java Main <путь_к_файлу> <ширина_кузова> <высота_кузова> [алгоритм]");
-            System.err.println("Алгоритмы: simple или optimized");
+        if (args.length < 5) {
+            System.err.println("Использование: java Main <путь_к_файлу> <ширина_кузова> <высота_кузова> <алгоритм> <количество_машин> [json_файл_результата]");
+            System.err.println("Алгоритмы: simple, optimized, even, dense");
             System.exit(1);
         }
 
@@ -41,6 +44,8 @@ public class ShippingApp {
         int truckWidth = Integer.parseInt(args[1]);
         int truckHeight = Integer.parseInt(args[2]);
         String algorithmType = args[3];
+        int maxTrucks = Integer.parseInt(args[4]);
+        String jsonOutputPath = args.length >= 6 ? args[5] : null;
 
         logger.info("Запуск программы упаковки посылок");
         logger.info("Файл: {}", filePath);
@@ -67,19 +72,25 @@ public class ShippingApp {
                 System.exit(1);
             }
 
-            // Выбор алгоритма
+            // Выбор алгоритма по коду
             PackingAlgorithm algorithm;
-            if ("optimized".equalsIgnoreCase(algorithmType)) {
-                algorithm = new OptimizedPackingAlgorithm();
-            } else {
-                algorithm = new SimplePackingAlgorithm();
+            switch (algorithmType.toLowerCase()) {
+                case "optimized" -> algorithm = new OptimizedPackingAlgorithm();
+                case "even" -> algorithm = new EvenDistributionPackingAlgorithm();
+                case "dense" -> algorithm = new DensePackingAlgorithm();
+                case "simple" -> algorithm = new SimplePackingAlgorithm();
+                default -> {
+                    System.err.println("Неизвестный алгоритм: " + algorithmType);
+                    System.exit(1);
+                    return;
+                }
             }
 
             logger.info("Используется алгоритм: {}", algorithm.getName());
 
             // Упаковка
             Truck.resetIdCounter();
-            List<Truck> trucks = algorithm.pack(packages, truckWidth, truckHeight);
+            List<Truck> trucks = algorithm.pack(packages, truckWidth, truckHeight, maxTrucks);
 
             // Вывод результата
             System.out.println("\nРезультат упаковки (" + algorithm.getName() + "):");
@@ -90,6 +101,14 @@ public class ShippingApp {
                 System.out.println("Кузов #" + truck.getId() + ":");
                 System.out.println(truck.render());
                 System.out.println();
+            }
+
+            // Опциональное сохранение результата в JSON
+            if (jsonOutputPath != null) {
+                PackingResultJsonService jsonService = new PackingResultJsonService();
+                jsonService.saveToJson(trucks, truckWidth, truckHeight, algorithm.getCode(),
+                        java.nio.file.Path.of(jsonOutputPath));
+                logger.info("Результат погрузки сохранён в JSON: {}", jsonOutputPath);
             }
 
             logger.info("Программа завершена успешно");

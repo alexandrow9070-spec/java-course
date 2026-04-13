@@ -25,6 +25,7 @@ import org.slf4j.LoggerFactory;
         
         List<Package> packages = new ArrayList<>();
         List<String> currentShape = new ArrayList<>();
+        String currentName = null;
         
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
             String line;
@@ -37,13 +38,17 @@ import org.slf4j.LoggerFactory;
                 if (line.isEmpty()) {
                     // Пустая строка означает конец текущей посылки
                     if (!currentShape.isEmpty()) {
-                        Package pkg = createPackage(currentShape);
+                        Package pkg = createPackage(currentName, currentShape);
                         if (pkg != null) {
                             packages.add(pkg);
                             logger.debug("Загружена посылка: {}", pkg);
                         }
                         currentShape.clear();
+                        currentName = null;
                     }
+                } else if (line.endsWith(":") && currentShape.isEmpty()) {
+                    // Новый формат: первая строка блока - имя посылки с двоеточием.
+                    currentName = line.substring(0, line.length() - 1).trim();
                 } else {
                     currentShape.add(line);
                 }
@@ -51,7 +56,7 @@ import org.slf4j.LoggerFactory;
             
             // Обработка последней посылки, если файл не заканчивается пустой строкой
             if (!currentShape.isEmpty()) {
-                ru.hofftech.omni.shipping.entities.Package pkg = createPackage(currentShape);
+                ru.hofftech.omni.shipping.entities.Package pkg = createPackage(currentName, currentShape);
                 if (pkg != null) {
                     packages.add(pkg);
                     logger.debug("Загружена посылка: {}", pkg);
@@ -66,7 +71,7 @@ import org.slf4j.LoggerFactory;
     /**
      * Создает посылку из списка строк
      */
-    private static Package createPackage(List<String> shape) {
+    private static Package createPackage(String name, List<String> shape) {
         if (shape.isEmpty()) {
             return null;
         }
@@ -89,6 +94,6 @@ import org.slf4j.LoggerFactory;
             normalizedShape.add(normalized.toString());
         }
         
-        return new Package(width, height, normalizedShape);
+        return new Package(name, width, height, normalizedShape);
     }
 }

@@ -1,126 +1,757 @@
-
 package ru.hofftech.omni.shipping;
 
-import ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
 import ru.hofftech.omni.shipping.entities.Package;
 import ru.hofftech.omni.shipping.entities.Truck;
-import ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
-import ru.hofftech.omni.shipping.services.PackageLoader;
+import ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
+import ru.hofftech.omni.shipping.services.NamedPackageTextFormatService;
+import ru.hofftech.omni.shipping.services.PackageTextFormatService;
 import ru.hofftech.omni.shipping.services.PackageValidator;
-import ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
-import ru.hofftech.omni.shipping.services.packing.EvenDistributionPackingAlgorithm;
-import ru.hofftech.omni.shipping.services.packing.DensePackingAlgorithm;
 import ru.hofftech.omni.shipping.services.PackingResultJsonService;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import ru.hofftech.omni.shipping.services.TrucksJsonFileService;
+import ru.hofftech.omni.shipping.services.packing.DensePackingAlgorithm;
+import ru.hofftech.omni.shipping.services.packing.EvenDistributionPackingAlgorithm;
+import ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
+import ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
- * Главный класс программы для упаковки посылок в кузовы грузовиков
+ * Единое CLI-приложение с командами:
+ * - pack: файл с посылками -> погрузка в кузовы (+опциональный JSON результата)
+ * - split: JSON результата погрузки -> текстовый файл с посылками
+ *
+ * Использование:
+ *   java ShippingApp pack <путь_к_файлу> <ширина_кузова> <высота_кузова> <алгоритм> <количество_машин> [json_файл_результата]
+ *   java ShippingApp split <json_вход> <файл_посылок_выход>
  */
 public class ShippingApp {
-    private static final Logger logger = LoggerFactory.getLogger(ShippingApp.class);
+    private static final Map<String, Command> COMMANDS = new LinkedHashMap<>();
+
+    static {
+        register(new PackCommand());
+        register(new SplitCommand());
+        register(new CreatePackageCommand());
+        register(new FindPackageCommand());
+        register(new DeletePackageCommand());
+        register(new LoadCommand());
+        register(new UnloadCommand());
+    }
 
     public static void main(String[] args) {
-
-        //явно указываем кодировку вывода
         System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
         System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
 
-        System.out.println("Предоставленные аргументы: "+Arrays.toString(args));
-        if (args.length < 5) {
-            System.err.println("Использование: java Main <путь_к_файлу> <ширина_кузова> <высота_кузова> <алгоритм> <количество_машин> [json_файл_результата]");
-            System.err.println("Алгоритмы: simple, optimized, even, dense");
+        if (args.length == 0) {
+            printUsage();
             System.exit(1);
         }
 
-        String filePath = args[0];
-        int truckWidth = Integer.parseInt(args[1]);
-        int truckHeight = Integer.parseInt(args[2]);
-        String algorithmType = args[3];
-        int maxTrucks = Integer.parseInt(args[4]);
-        String jsonOutputPath = args.length >= 6 ? args[5] : null;
+        String commandName = args[0].toLowerCase();
+        Command command = COMMANDS.get(commandName);
+        if (command == null) {
+            System.err.println("Неизвестная команда: " + commandName);
+            printUsage();
+            System.exit(1);
+        }
 
-        logger.info("Запуск программы упаковки посылок");
-        logger.info("Файл: {}", filePath);
-        logger.info("Алгоритм: {}", algorithmType);
+        String[] commandArgs = Arrays.copyOfRange(args, 1, args.length);
+        if (commandArgs.length < command.minArgs()) {
+            System.err.println("Недостаточно аргументов для команды: " + command.name());
+            printUsage();
+            System.exit(1);
+        }
 
         try {
-            // Загрузка посылок
-            List<Package> packages = PackageLoader.loadPackages(filePath);
+            command.execute(commandArgs);
+        } catch (Exception e) {
+            System.err.println("Ошибка выполнения команды '" + command.name() + "': " + e.getMessage());
+            e.printStackTrace();
+            System.exit(1);
+        }
+    }
 
+    private static void register(Command command) {
+        COMMANDS.put(command.name(), command);
+    }
+
+    private static void printUsage() {
+        System.err.println("Использование:");
+        System.err.println("  java ShippingApp pack <путь_к_файлу> <ширина_кузова> <высота_кузова> <алгоритм> <количество_машин> [json_файл_результата]");
+        System.err.println("  java ShippingApp split <json_вход> <файл_посылок_выход>");
+        System.err.println("  java ShippingApp createpackage -name \"test4x4\" -form \"oooo\\no  o\\no  o\\noooo\\n\"");
+        System.err.println("  java ShippingApp findpackage \"test4x4\"");
+        System.err.println("  java ShippingApp deletepackage \"test4x4\"");
+        System.err.println("  java ShippingApp load -parcels-text \"test3x3,test3x2\" -trucks \"3x3 4x4\" -type \"simple\" -out text");
+        System.err.println("  java ShippingApp load -parcels-file \"parcels.csv\" -trucks \"3x3 4x4\" -type \"simple\" -out json-file -out-filename \"trucks.json\"");
+        System.err.println("  java ShippingApp unload -infile \"trucks.json\" -outfile \"parcels.csv\" [--withcount]");
+        System.err.println("Алгоритмы для pack: simple, optimized, even, dense");
+    }
+
+    interface Command {
+        String name();
+
+        int minArgs();
+
+        void execute(String[] args) throws Exception;
+    }
+
+    static class PackCommand implements Command {
+        @Override
+        public String name() {
+            return "pack";
+        }
+
+        @Override
+        public int minArgs() {
+            return 5;
+        }
+
+        @Override
+        public void execute(String[] args) throws IOException {
+            String filePath = args[0];
+            int truckWidth = Integer.parseInt(args[1]);
+            int truckHeight = Integer.parseInt(args[2]);
+            String algorithmType = args[3];
+            int maxTrucks = Integer.parseInt(args[4]);
+            String jsonOutputPath = args.length >= 6 ? args[5] : null;
+
+            PackageTextFormatService textFormatService = new PackageTextFormatService();
+            List<Package> packages = textFormatService.loadFromTextFile(Path.of(filePath));
             if (packages.isEmpty()) {
-                System.err.println("Файл не содержит посылок");
-                logger.warn("Файл не содержит посылок");
-                System.exit(1);
+                throw new IllegalArgumentException("Файл не содержит посылок");
             }
 
-            // Валидация
             PackageValidator.ValidationResult validation = PackageValidator.validate(
-                    packages, truckWidth, truckHeight);
-
+                    packages, truckWidth, truckHeight
+            );
             if (!validation.isValid()) {
-                System.err.println("Ошибки валидации:");
-                System.err.println(validation.getErrorMessage());
-                logger.error("Валидация не пройдена");
-                System.exit(1);
+                throw new IllegalArgumentException("Ошибки валидации:\n" + validation.getErrorMessage());
             }
 
-            // Выбор алгоритма по коду
-            PackingAlgorithm algorithm;
-            switch (algorithmType.toLowerCase()) {
-                case "optimized" -> algorithm = new OptimizedPackingAlgorithm();
-                case "even" -> algorithm = new EvenDistributionPackingAlgorithm();
-                case "dense" -> algorithm = new DensePackingAlgorithm();
-                case "simple" -> algorithm = new SimplePackingAlgorithm();
-                default -> {
-                    System.err.println("Неизвестный алгоритм: " + algorithmType);
-                    System.exit(1);
-                    return;
-                }
-            }
-
-            logger.info("Используется алгоритм: {}", algorithm.getName());
-
-            // Упаковка
+            PackingAlgorithm algorithm = resolveAlgorithm(algorithmType);
             Truck.resetIdCounter();
             List<Truck> trucks = algorithm.pack(packages, truckWidth, truckHeight, maxTrucks);
 
-            // Вывод результата
-            System.out.println("\nРезультат упаковки (" + algorithm.getName() + "):");
+            System.out.println();
+            System.out.println("Результат упаковки (" + algorithm.getName() + "):");
             System.out.println("Использовано кузовов: " + trucks.size());
             System.out.println();
-
             for (Truck truck : trucks) {
                 System.out.println("Кузов #" + truck.getId() + ":");
                 System.out.println(truck.render());
                 System.out.println();
             }
 
-            // Опциональное сохранение результата в JSON
             if (jsonOutputPath != null) {
                 PackingResultJsonService jsonService = new PackingResultJsonService();
-                jsonService.saveToJson(trucks, truckWidth, truckHeight, algorithm.getCode(),
-                        java.nio.file.Path.of(jsonOutputPath));
-                logger.info("Результат погрузки сохранён в JSON: {}", jsonOutputPath);
+                jsonService.saveToJson(
+                        trucks,
+                        truckWidth,
+                        truckHeight,
+                        algorithm.getCode(),
+                        Path.of(jsonOutputPath)
+                );
+                System.out.println("Результат погрузки сохранён в JSON: " + jsonOutputPath);
             }
+        }
 
-            logger.info("Программа завершена успешно");
-
-        } catch (IOException e) {
-            System.err.println("Ошибка при чтении файла: " + e.getMessage());
-            logger.error("Ошибка при чтении файла: {}", e.getMessage(), e);
-            System.exit(1);
-        } catch (Exception e) {
-            System.err.println("Неожиданная ошибка: " + e.getMessage());
-            logger.error("Неожиданная ошибка: {}", e.getMessage(), e);
-            System.exit(1);
+        private PackingAlgorithm resolveAlgorithm(String algorithmType) {
+            return switch (algorithmType.toLowerCase()) {
+                case "optimized" -> new OptimizedPackingAlgorithm();
+                case "even" -> new EvenDistributionPackingAlgorithm();
+                case "dense" -> new DensePackingAlgorithm();
+                case "simple" -> new SimplePackingAlgorithm();
+                default -> throw new IllegalArgumentException("Неизвестный алгоритм: " + algorithmType);
+            };
         }
     }
+
+    static class SplitCommand implements Command {
+        @Override
+        public String name() {
+            return "split";
+        }
+
+        @Override
+        public int minArgs() {
+            return 2;
+        }
+
+        @Override
+        public void execute(String[] args) throws IOException {
+            String jsonInput = args[0];
+            String packagesOutput = args[1];
+
+            PackingResultJsonService service = new PackingResultJsonService();
+            List<Package> packages = service.loadPackagesFromJson(Path.of(jsonInput));
+            if (packages.isEmpty()) {
+                System.err.println("JSON не содержит посылок");
+            }
+
+            List<Package> namedPackages = ensureNames(packages);
+            Map<String, Package> byName = new LinkedHashMap<>();
+            for (Package pkg : namedPackages) {
+                byName.put(pkg.getName(), pkg);
+            }
+            NamedPackageTextFormatService namedFormatService = new NamedPackageTextFormatService();
+            namedFormatService.writeToFile(byName, Path.of(packagesOutput));
+            System.out.printf("Создан файл посылок: %s (из %s)%n", packagesOutput, jsonInput);
+        }
+    }
+
+    static class CreatePackageCommand implements Command {
+        @Override
+        public String name() {
+            return "createpackage";
+        }
+
+        @Override
+        public int minArgs() {
+            return 4;
+        }
+
+        @Override
+        public void execute(String[] args) throws Exception {
+            Map<String, String> flags = parseFlags(args);
+            String name = require(flags, "-name");
+            String form = require(flags, "-form");
+
+            ru.hofftech.omni.shipping.services.PackageRepository repo =
+                    new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+
+            Package pkg = parsePackageFromForm(name, form);
+            repo.create(pkg);
+            printPackage(pkg);
+        }
+    }
+
+    static class FindPackageCommand implements Command {
+        @Override
+        public String name() {
+            return "findpackage";
+        }
+
+        @Override
+        public int minArgs() {
+            return 1;
+        }
+
+        @Override
+        public void execute(String[] args) throws Exception {
+            String name = stripQuotes(args[0].trim());
+            ru.hofftech.omni.shipping.services.PackageRepository repo =
+                    new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+
+            Package pkg = repo.findByName(name)
+                    .orElseThrow(() -> new IllegalArgumentException("Посылка '" + name + "' не найдена"));
+            printPackage(pkg);
+        }
+    }
+
+    static class DeletePackageCommand implements Command {
+        @Override
+        public String name() {
+            return "deletepackage";
+        }
+
+        @Override
+        public int minArgs() {
+            return 1;
+        }
+
+        @Override
+        public void execute(String[] args) throws Exception {
+            String name = stripQuotes(args[0].trim());
+            ru.hofftech.omni.shipping.services.PackageRepository repo =
+                    new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+
+            boolean deleted = repo.delete(name);
+            if (!deleted) {
+                throw new IllegalArgumentException("Посылка '" + name + "' не найдена");
+            }
+            System.out.println("Посылка \"" + name + "\" удалена.");
+        }
+    }
+
+    private static Map<String, String> parseFlags(String[] args) {
+        Map<String, String> flags = new LinkedHashMap<>();
+        for (int i = 0; i < args.length; i++) {
+            String key = args[i];
+            if (!key.startsWith("-")) {
+                continue;
+            }
+            // boolean flags: --withcount
+            if (key.startsWith("--")) {
+                flags.put(key.toLowerCase(), "true");
+                continue;
+            }
+            if (i + 1 >= args.length) {
+                throw new IllegalArgumentException("Флаг без значения: " + key);
+            }
+            String k = key.toLowerCase();
+            StringBuilder value = new StringBuilder();
+            i++;
+            while (i < args.length) {
+                String token = args[i];
+                if (token.startsWith("-")) {
+                    i--; // откатываемся, следующий цикл обработает новый ключ
+                    break;
+                }
+                if (!value.isEmpty()) value.append(" ");
+                value.append(stripQuotes(token));
+                i++;
+            }
+            flags.put(k, value.toString());
+        }
+        return flags;
+    }
+
+    private static String require(Map<String, String> flags, String key) {
+        String v = flags.get(key.toLowerCase());
+        if (v == null) {
+            throw new IllegalArgumentException("Не задан обязательный флаг: " + key);
+        }
+        return v;
+    }
+
+    private static String stripQuotes(String s) {
+        if (s == null) return null;
+        if (s.length() >= 2 && ((s.startsWith("\"") && s.endsWith("\"")) || (s.startsWith("'") && s.endsWith("'")))) {
+            return s.substring(1, s.length() - 1);
+        }
+        return s;
+    }
+
+    private static String unescape(String s) {
+        // минимум необходимый для -form "...\\n..."
+        return s.replace("\\\\", "\\")
+                .replace("\\n", "\n")
+                .replace("\\r", "\r")
+                .replace("\\t", "\t");
+    }
+
+    private static Package parsePackageFromForm(String name, String rawForm) {
+        String form = unescape(rawForm);
+        if (form.endsWith("\n")) {
+            form = form.substring(0, form.length() - 1);
+        }
+        String[] lines = form.split("\\R", -1);
+        List<String> shape = new java.util.ArrayList<>();
+        for (String line : lines) {
+            if (line.isEmpty()) continue;
+            shape.add(line);
+        }
+        if (shape.isEmpty()) {
+            throw new IllegalArgumentException("Пустая форма посылки");
+        }
+
+        int height = shape.size();
+        int width = 0;
+        for (String line : shape) {
+            width = Math.max(width, line.length());
+        }
+
+        List<String> normalized = new java.util.ArrayList<>(height);
+        for (String line : shape) {
+            StringBuilder sb = new StringBuilder(line);
+            while (sb.length() < width) sb.append(' ');
+            normalized.add(sb.toString());
+        }
+
+        return new Package(name, width, height, normalized);
+    }
+
+    private static void printPackage(Package pkg) {
+        System.out.println("id(name): \"" + pkg.getName() + "\"");
+        System.out.println("form:");
+        for (String line : pkg.getShape()) {
+            System.out.println(line);
+        }
+    }
+
+    static class LoadCommand implements Command {
+        @Override
+        public String name() {
+            return "load";
+        }
+
+        @Override
+        public int minArgs() {
+            return 8;
+        }
+
+        @Override
+        public void execute(String[] args) throws Exception {
+            Map<String, String> flags = parseFlags(args);
+
+            String parcelsText = flags.get("-parcels-text");
+            String parcelsFile = flags.get("-parcels-file");
+            if ((parcelsText == null && parcelsFile == null) || (parcelsText != null && parcelsFile != null)) {
+                throw new IllegalArgumentException("Нужно указать ровно один из флагов: -parcels-text или -parcels-file");
+            }
+
+            String trucksSpec = require(flags, "-trucks");
+            String type = require(flags, "-type").toLowerCase();
+            String out = require(flags, "-out").toLowerCase();
+            String outFilename = flags.get("-out-filename");
+
+            List<String> parcelNames = (parcelsText != null)
+                    ? parseParcelsText(parcelsText)
+                    : loadParcelNamesFromFile(Path.of(parcelsFile));
+
+            List<TruckSpec> truckSpecs = parseTruckSpecs(trucksSpec);
+            if (truckSpecs.isEmpty()) {
+                throw new IllegalArgumentException("Список кузовов пуст");
+            }
+
+            List<Package> parcels = loadParcelsFromDb(parcelNames);
+
+            List<Truck> trucks;
+            if (allSameSize(truckSpecs)) {
+                TruckSpec first = truckSpecs.get(0);
+                PackingAlgorithm algorithm = resolveAlgorithm(type);
+                Truck.resetIdCounter();
+                trucks = algorithm.pack(parcels, first.width, first.height, truckSpecs.size());
+            } else {
+                if (!type.equals("simple")) {
+                    throw new IllegalArgumentException("Для разных размеров кузовов поддерживается только type=\"simple\"");
+                }
+                Truck.resetIdCounter();
+                trucks = new ArrayList<>();
+                for (TruckSpec ts : truckSpecs) {
+                    trucks.add(new Truck(ts.width, ts.height));
+                }
+                packSimpleMulti(parcels, trucks);
+            }
+
+            if (out.equals("text")) {
+                printLoadText(truckSpecs, trucks);
+                return;
+            }
+            if (out.equals("json-file")) {
+                if (outFilename == null || outFilename.isBlank()) {
+                    throw new IllegalArgumentException("Для -out json-file нужно указать -out-filename");
+                }
+                Path outPath = Path.of(outFilename);
+                TrucksJsonFileService service = new TrucksJsonFileService();
+                service.write(outPath, toLoadDtos(truckSpecs, trucks));
+                System.out.println(outFilename);
+                return;
+            }
+
+            throw new IllegalArgumentException("Неизвестный формат вывода -out: " + out);
+        }
+
+        private PackingAlgorithm resolveAlgorithm(String algorithmType) {
+            return switch (algorithmType.toLowerCase()) {
+                case "optimized" -> new OptimizedPackingAlgorithm();
+                case "even" -> new EvenDistributionPackingAlgorithm();
+                case "dense" -> new DensePackingAlgorithm();
+                case "simple" -> new SimplePackingAlgorithm();
+                default -> throw new IllegalArgumentException("Неизвестный алгоритм: " + algorithmType);
+            };
+        }
+    }
+
+    static class UnloadCommand implements Command {
+        @Override
+        public String name() {
+            return "unload";
+        }
+
+        @Override
+        public int minArgs() {
+            return 4;
+        }
+
+        @Override
+        public void execute(String[] args) throws Exception {
+            Map<String, String> flags = parseFlags(args);
+            boolean withCount = hasFlag(args, "--withcount");
+
+            Path inFile = Path.of(require(flags, "-infile"));
+            Path outFile = Path.of(require(flags, "-outfile"));
+
+            TrucksJsonFileService service = new TrucksJsonFileService();
+            List<TrucksJsonFileService.TruckLoadDto> trucks = service.read(inFile);
+
+            if (withCount) {
+                LinkedHashMap<String, Integer> counts = new LinkedHashMap<>();
+                for (TrucksJsonFileService.TruckLoadDto t : trucks) {
+                    for (TrucksJsonFileService.ParcelLoadDto p : t.parcels()) {
+                        counts.put(p.name(), counts.getOrDefault(p.name(), 0) + 1);
+                    }
+                }
+                List<String> lines = new ArrayList<>();
+                for (Map.Entry<String, Integer> e : counts.entrySet()) {
+                    lines.add("\"" + e.getKey() + "\";" + e.getValue());
+                }
+                Files.write(outFile, lines, StandardCharsets.UTF_8);
+            } else {
+                List<String> lines = new ArrayList<>();
+                for (TrucksJsonFileService.TruckLoadDto t : trucks) {
+                    for (TrucksJsonFileService.ParcelLoadDto p : t.parcels()) {
+                        lines.add("\"" + p.name() + "\"");
+                    }
+                }
+                Files.write(outFile, lines, StandardCharsets.UTF_8);
+            }
+
+            System.out.println(outFile.getFileName());
+        }
+    }
+
+    private static boolean hasFlag(String[] args, String flag) {
+        for (String a : args) {
+            if (a.equalsIgnoreCase(flag)) return true;
+        }
+        return false;
+    }
+
+    private record TruckSpec(int width, int height) {
+        String asType() {
+            return width + "x" + height;
+        }
+    }
+
+    private static List<String> parseParcelsText(String parcelsText) {
+        String s = parcelsText.trim();
+        if (s.isBlank()) return List.of();
+        String[] parts = s.split(",");
+        List<String> names = new ArrayList<>();
+        for (String p : parts) {
+            String name = p.trim();
+            if (!name.isEmpty()) names.add(name);
+        }
+        return names;
+    }
+
+    private static List<String> loadParcelNamesFromFile(Path parcelsFile) throws IOException {
+        List<String> rawLines = Files.readAllLines(parcelsFile, StandardCharsets.UTF_8);
+        List<String> names = new ArrayList<>();
+        for (String raw : rawLines) {
+            if (raw == null) continue;
+            String line = raw.trim();
+            if (line.isEmpty()) continue;
+            // поддержка CSV: "name" или "name";count
+            String[] parts = line.split(";", -1);
+            String name = stripQuotes(parts[0].trim());
+            if (!name.isBlank()) names.add(name);
+        }
+        return names;
+    }
+
+    private static List<TruckSpec> parseTruckSpecs(String trucksSpec) {
+        String spec = trucksSpec.trim();
+        if (spec.isBlank()) return List.of();
+        String[] parts = spec.split("[,\\s]+");
+        List<TruckSpec> list = new ArrayList<>();
+        for (String p : parts) {
+            String[] wh = p.toLowerCase().split("x");
+            if (wh.length != 2) {
+                throw new IllegalArgumentException("Неверный размер кузова: " + p + " (ожидается WxH)");
+            }
+            int w = Integer.parseInt(wh[0]);
+            int h = Integer.parseInt(wh[1]);
+            list.add(new TruckSpec(w, h));
+        }
+        return list;
+    }
+
+    private static boolean allSameSize(List<TruckSpec> specs) {
+        if (specs.isEmpty()) return true;
+        TruckSpec first = specs.get(0);
+        for (TruckSpec s : specs) {
+            if (s.width != first.width || s.height != first.height) return false;
+        }
+        return true;
+    }
+
+    private static List<Package> loadParcelsFromDb(List<String> names) throws IOException {
+        ru.hofftech.omni.shipping.services.PackageRepository repo =
+                new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+
+        List<Package> parcels = new ArrayList<>();
+        Set<String> missing = new LinkedHashSet<>();
+
+        for (String name : names) {
+            Package fromDb = repo.findByName(name).orElse(null);
+            if (fromDb == null) {
+                missing.add(name);
+                continue;
+            }
+            parcels.add(clonePackage(fromDb));
+        }
+
+        if (!missing.isEmpty()) {
+            throw new IllegalArgumentException("Посылки не найдены в базе: " + String.join(", ", missing));
+        }
+
+        return parcels;
+    }
+
+    private static Package clonePackage(Package p) {
+        return new Package(p.getName(), p.getWidth(), p.getHeight(), p.getShape());
+    }
+
+    private static List<Package> ensureNames(List<Package> packages) throws IOException {
+        boolean hasMissing = false;
+        for (Package pkg : packages) {
+            if (pkg.getName() == null || pkg.getName().isBlank()) {
+                hasMissing = true;
+                break;
+            }
+        }
+        if (!hasMissing) {
+            return packages;
+        }
+
+        ru.hofftech.omni.shipping.services.PackageRepository repo =
+                new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+        Map<String, Package> dbByName = repo.loadAll();
+        Map<String, List<String>> shapeToNames = new LinkedHashMap<>();
+        for (Package dbPkg : dbByName.values()) {
+            String key = shapeKey(dbPkg.getShape());
+            shapeToNames.computeIfAbsent(key, unused -> new ArrayList<>()).add(dbPkg.getName());
+        }
+
+        List<Package> resolved = new ArrayList<>(packages.size());
+        for (Package pkg : packages) {
+            if (pkg.getName() != null && !pkg.getName().isBlank()) {
+                resolved.add(pkg);
+                continue;
+            }
+
+            String key = shapeKey(pkg.getShape());
+            List<String> names = shapeToNames.get(key);
+            if (names == null || names.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "Невозможно восстановить имя посылки по форме из базы test-input.txt");
+            }
+            if (names.size() > 1) {
+                throw new IllegalArgumentException(
+                        "Найдено несколько имен для одной формы в базе test-input.txt: " + names);
+            }
+            resolved.add(new Package(names.get(0), pkg.getWidth(), pkg.getHeight(), pkg.getShape()));
+        }
+        return resolved;
+    }
+
+    private static String shapeKey(List<String> shape) {
+        return String.join("\n", shape);
+    }
+
+    private static void packSimpleMulti(List<Package> parcels, List<Truck> trucks) {
+        int parcelIdx = 0;
+        for (Truck truck : trucks) {
+            if (parcelIdx >= parcels.size()) break;
+            Package pkg = parcels.get(parcelIdx);
+            boolean ok = truck.tryPlacePackage(pkg);
+            if (!ok) {
+                throw new IllegalStateException("Не удалось разместить посылку '" + pkg.getName() + "' в кузове " + truck.getWidth() + "x" + truck.getHeight());
+            }
+            parcelIdx++;
+        }
+        if (parcelIdx < parcels.size()) {
+            throw new IllegalStateException("Недостаточно кузовов для погрузки всех посылок");
+        }
+    }
+
+    private static void printLoadText(List<TruckSpec> specs, List<Truck> trucks) {
+        // trucks могут быть меньше specs (алгоритмы pack создают по потребности) — печатаем то, что есть
+        for (int i = 0; i < trucks.size(); i++) {
+            Truck truck = trucks.get(i);
+            TruckSpec spec = (i < specs.size()) ? specs.get(i) : new TruckSpec(truck.getWidth(), truck.getHeight());
+
+            System.out.println("Кузов: " + spec.asType());
+            System.out.println(renderForLoad(truck));
+
+            for (Package pkg : truck.getPackages()) {
+                System.out.println("Посылка: " + pkg.getName());
+                for (String line : pkg.getShape()) {
+                    System.out.println(line);
+                }
+                System.out.println("Координаты посылки " + pkg.getName() + ":");
+                System.out.println(formatCoordinates(pkg));
+            }
+        }
+    }
+
+    private static String renderForLoad(Truck truck) {
+        StringBuilder sb = new StringBuilder();
+        for (int y = 0; y < truck.getHeight(); y++) {
+            sb.append("+");
+            for (int x = 0; x < truck.getWidth(); x++) {
+                sb.append(truck.getCell(x, y));
+            }
+            sb.append("+\n");
+        }
+        sb.append("+".repeat(truck.getWidth() + 2));
+        return sb.toString();
+    }
+
+    private static String formatCoordinates(Package pkg) {
+        List<String> coords = new ArrayList<>();
+        List<String> shape = pkg.getShape();
+        for (int py = 0; py < pkg.getHeight(); py++) {
+            String row = shape.get(py);
+            for (int px = 0; px < pkg.getWidth(); px++) {
+                if (row.charAt(px) != ' ') {
+                    int y = pkg.getY() + py;
+                    int x = pkg.getX() + px;
+                    coords.add("[" + y + ", " + x + "]");
+                }
+            }
+        }
+        return String.join(",", coords);
+    }
+
+    private static List<TrucksJsonFileService.TruckLoadDto> toLoadDtos(List<TruckSpec> specs, List<Truck> trucks) {
+        List<TrucksJsonFileService.TruckLoadDto> dtos = new ArrayList<>();
+
+        int count = Math.max(specs.size(), trucks.size());
+        for (int i = 0; i < count; i++) {
+            TruckSpec spec = (i < specs.size()) ? specs.get(i) : null;
+            Truck truck = (i < trucks.size()) ? trucks.get(i) : null;
+
+            String truckType = (spec != null) ? spec.asType() : (truck != null ? (truck.getWidth() + "x" + truck.getHeight()) : "");
+            List<TrucksJsonFileService.ParcelLoadDto> parcels = new ArrayList<>();
+
+            if (truck != null) {
+                for (Package pkg : truck.getPackages()) {
+                    parcels.add(new TrucksJsonFileService.ParcelLoadDto(pkg.getName(), toCoordinatesList(pkg)));
+                }
+            }
+
+            dtos.add(new TrucksJsonFileService.TruckLoadDto(truckType, parcels));
+        }
+
+        return dtos;
+    }
+
+    private static List<List<Integer>> toCoordinatesList(Package pkg) {
+        List<List<Integer>> coords = new ArrayList<>();
+        List<String> shape = pkg.getShape();
+        for (int py = 0; py < pkg.getHeight(); py++) {
+            String row = shape.get(py);
+            for (int px = 0; px < pkg.getWidth(); px++) {
+                if (row.charAt(px) != ' ') {
+                    coords.add(List.of(pkg.getY() + py, pkg.getX() + px));
+                }
+            }
+        }
+        return coords;
+    }
 }
+

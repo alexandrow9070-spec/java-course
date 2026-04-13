@@ -1,14 +1,17 @@
-999
-999
-999
+test3x3:
+ooo
+ooo
+ooo
 
-666
-666
+test3x2:
+ooo
+ooo
 
-55555
+test5x1:
+ooooo
 
-1
+test1x1:
+o
 
-1
-
-333
+test3x1:
+ooo

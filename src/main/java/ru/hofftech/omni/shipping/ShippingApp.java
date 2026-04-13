@@ -15,6 +15,7 @@ import ru.hofftech.omni.shipping.services.packing.SimplePackingAlgorithm;
 
 import java.io.IOException;
 import java.io.PrintStream;
+import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -37,6 +38,7 @@ import java.util.Set;
  */
 public class ShippingApp {
     private static final Map<String, Command> COMMANDS = new LinkedHashMap<>();
+    private static final Object EXECUTION_LOCK = new Object();
 
     static {
         register(new PackCommand());
@@ -51,10 +53,13 @@ public class ShippingApp {
     public static void main(String[] args) {
         System.setOut(new PrintStream(System.out, true, StandardCharsets.UTF_8));
         System.setErr(new PrintStream(System.err, true, StandardCharsets.UTF_8));
+        System.exit(run(args));
+    }
 
+    public static int run(String[] args) {
         if (args.length == 0) {
             printUsage();
-            System.exit(1);
+            return 1;
         }
 
         String commandName = args[0].toLowerCase();
@@ -62,23 +67,117 @@ public class ShippingApp {
         if (command == null) {
             System.err.println("Неизвестная команда: " + commandName);
             printUsage();
-            System.exit(1);
+            return 1;
         }
 
         String[] commandArgs = Arrays.copyOfRange(args, 1, args.length);
         if (commandArgs.length < command.minArgs()) {
             System.err.println("Недостаточно аргументов для команды: " + command.name());
             printUsage();
-            System.exit(1);
+            return 1;
         }
 
         try {
             command.execute(commandArgs);
+            return 0;
         } catch (Exception e) {
             System.err.println("Ошибка выполнения команды '" + command.name() + "': " + e.getMessage());
             e.printStackTrace();
-            System.exit(1);
+            return 1;
         }
+    }
+
+    public static String executeExternalCommandLine(String commandLine) {
+        List<String> args = tokenizeCommandLine(commandLine);
+        if (args.isEmpty()) {
+            return "Пустая команда.";
+        }
+
+        synchronized (EXECUTION_LOCK) {
+            PrintStream originalOut = System.out;
+            PrintStream originalErr = System.err;
+            ByteArrayOutputStream outBuffer = new ByteArrayOutputStream();
+            ByteArrayOutputStream errBuffer = new ByteArrayOutputStream();
+
+            try (PrintStream tempOut = new PrintStream(outBuffer, true, StandardCharsets.UTF_8);
+                 PrintStream tempErr = new PrintStream(errBuffer, true, StandardCharsets.UTF_8)) {
+                System.setOut(tempOut);
+                System.setErr(tempErr);
+                int exitCode = run(args.toArray(new String[0]));
+
+                String stdout = outBuffer.toString(StandardCharsets.UTF_8);
+                String stderr = errBuffer.toString(StandardCharsets.UTF_8);
+
+                StringBuilder result = new StringBuilder();
+                if (!stdout.isBlank()) {
+                    result.append(stdout.trim());
+                }
+                if (!stderr.isBlank()) {
+                    if (!result.isEmpty()) {
+                        result.append("\n");
+                    }
+                    result.append(stderr.trim());
+                }
+
+                if (result.isEmpty()) {
+                    return exitCode == 0 ? "Команда выполнена." : "Команда завершилась с ошибкой.";
+                }
+                return result.toString();
+            } finally {
+                System.setOut(originalOut);
+                System.setErr(originalErr);
+            }
+        }
+    }
+
+    public static List<String> tokenizeCommandLine(String input) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        char quoteChar = 0;
+
+        for (int i = 0; i < input.length(); i++) {
+            char c = input.charAt(i);
+            if (inQuotes) {
+                if (c == '\\' && i + 1 < input.length()) {
+                    char next = input.charAt(i + 1);
+                    if (next == quoteChar || next == '\\' || next == 'n' || next == 't' || next == 'r') {
+                        if (next == 'n') current.append("\\n");
+                        else if (next == 't') current.append("\\t");
+                        else if (next == 'r') current.append("\\r");
+                        else current.append(next);
+                        i++;
+                        continue;
+                    }
+                }
+                if (c == quoteChar) {
+                    inQuotes = false;
+                } else {
+                    current.append(c);
+                }
+                continue;
+            }
+
+            if (c == '"' || c == '\'') {
+                inQuotes = true;
+                quoteChar = c;
+                continue;
+            }
+
+            if (Character.isWhitespace(c)) {
+                if (!current.isEmpty()) {
+                    tokens.add(current.toString());
+                    current.setLength(0);
+                }
+            } else {
+                current.append(c);
+            }
+        }
+
+        if (!current.isEmpty()) {
+            tokens.add(current.toString());
+        }
+        return tokens;
     }
 
     private static void register(Command command) {

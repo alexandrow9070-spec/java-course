@@ -4,7 +4,8 @@ CLI-проект на Java для операций:
 
 - управление базой посылок (создать/найти/удалить);
 - погрузка посылок в кузовы (`pack`, `load`);
-- выгрузка списка посылок из результата погрузки (`split`, `unload`).
+- выгрузка списка посылок из результата погрузки (`split`, `unload`);
+- управление через Telegram-бота (команды из чата).
 
 ## Возможности
 
@@ -15,6 +16,7 @@ CLI-проект на Java для операций:
 - база посылок в `test-input.txt` с уникальными названиями;
 - добавление/просмотр/удаление посылок в базе (`createpackage`, `findpackage`, `deletepackage`);
 - погрузка по названиям посылок (загрузить то, чего нет в базе — нельзя);
+- Telegram-бот для команд `createpackage`, `findpackage`, `deletepackage`, `load`, `unload`;
 - запуск через Gradle и через исполняемый fat jar.
 
 ## Структура (основное)
@@ -22,6 +24,7 @@ CLI-проект на Java для операций:
 ```text
 src/main/java/ru/hofftech/omni/shipping
 ├── ShippingApp.java                 # единый CLI (pack/split/create/find/delete/load/unload)
+├── TelegramShippingBotApp.java      # Telegram long-polling бот
 ├── entities
 │   ├── Package.java
 │   └── Truck.java
@@ -47,6 +50,7 @@ src/main/java/ru/hofftech/omni/shipping
 - JDK 18+
 - рекомендуется использовать Gradle Wrapper (`gradlew`, `gradlew.bat`)
 - консоль с UTF-8
+- для Telegram-бота нужен токен Telegram Bot API
 
 ## Быстрый старт
 
@@ -126,6 +130,51 @@ Windows:
 .\gradlew.bat Shipping --args="unload -infile trucks.json -outfile parcels-with-count.csv --withcount"
 ```
 
+### 3) Telegram-бот (`TelegramBot`)
+
+Бот поддерживает команды из чата:
+
+- `createpackage`
+- `findpackage`
+- `deletepackage`
+- `load`
+- `unload`
+
+Бот читает настройки из файла `.env` в корне проекта:
+
+```env
+TELEGRAM_BOT_TOKEN=
+TELEGRAM_ALLOWED_CHAT_ID=
+```
+
+Также можно задать переменные окружения — они имеют приоритет над `.env`:
+
+- `TELEGRAM_BOT_TOKEN` — токен бота (обязательно);
+- `TELEGRAM_ALLOWED_CHAT_ID` — id чата, которому разрешён доступ (опционально, но рекомендуется).
+
+Запуск:
+
+```powershell
+$env:TELEGRAM_BOT_TOKEN="123456:abc..."
+$env:TELEGRAM_ALLOWED_CHAT_ID="123456789"
+.\gradlew.bat TelegramBot
+```
+
+Примеры сообщений боту:
+
+```text
+/findpackage "test3x3"
+/createpackage -name "test4x4" -form "oooo\no  o\no  o\noooo\n"
+/load -parcels-text "test3x3,test3x2" -trucks "3x3 4x4" -type "simple" -out text
+/unload -infile "trucks.json" -outfile "parcels.csv"
+```
+
+Дополнительно:
+
+- можно писать как с `/`, так и без него (`/findpackage ...` и `findpackage ...`);
+- `/start` и `/help` показывают список поддерживаемых команд;
+- если задан `TELEGRAM_ALLOWED_CHAT_ID`, бот отвечает только этому чату.
+
 ## Запуск без Gradle (через jar)
 
 В проекте есть задача `fatJar`, которая собирает исполняемый jar со всеми зависимостями.
@@ -155,6 +204,12 @@ java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar pack test-input.txt 6 6 op
 java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar split result.json packages.txt
 java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar load -parcels-text "test3x3,test3x2" -trucks "3x3 4x4" -type simple -out json-file -out-filename trucks.json
 java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar unload -infile trucks.json -outfile parcels.csv --withcount
+```
+
+Запуск Telegram-бота из fat jar:
+
+```bash
+TELEGRAM_BOT_TOKEN=123456:abc... TELEGRAM_ALLOWED_CHAT_ID=123456789 java -cp build/libs/java-course-1.0-SNAPSHOT-all.jar ru.hofftech.omni.shipping.TelegramShippingBotApp
 ```
 
 ## Аргументы команды `pack`

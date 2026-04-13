@@ -51,6 +51,13 @@ tasks.register('Shipping', JavaExec) {
     mainClass = 'ru.hofftech.omni.shipping.ShippingApp'
 }
 
+tasks.register('TelegramBot', JavaExec) {
+    group = 'application'
+    description = 'Запускает Telegram-бота для команд shipping'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ru.hofftech.omni.shipping.TelegramShippingBotApp'
+}
+
 jar {
     manifest {
         attributes(

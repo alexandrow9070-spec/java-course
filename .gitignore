@@ -33,3 +33,4 @@ test-input.txt
 test-output.txt
 result.json
 packages-from-json.txt
+/.env

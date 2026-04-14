@@ -17,10 +17,6 @@ public class PackageRepository {
     private final Path dbPath;
     private final NamedPackageTextFormatService formatService;
 
-    public PackageRepository(Path dbPath) {
-        this(dbPath, new NamedPackageTextFormatService());
-    }
-
     public PackageRepository(Path dbPath, NamedPackageTextFormatService formatService) {
         this.dbPath = dbPath;
         this.formatService = formatService;

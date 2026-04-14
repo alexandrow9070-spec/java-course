@@ -4,10 +4,12 @@ import ru.hofftech.omni.shipping.entities.Package;
 import ru.hofftech.omni.shipping.entities.Truck;
 import ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
 import ru.hofftech.omni.shipping.services.NamedPackageTextFormatService;
+import ru.hofftech.omni.shipping.services.PackageRepository;
 import ru.hofftech.omni.shipping.services.PackageTextFormatService;
 import ru.hofftech.omni.shipping.services.PackageValidator;
 import ru.hofftech.omni.shipping.services.PackingResultJsonService;
 import ru.hofftech.omni.shipping.services.TrucksJsonFileService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import ru.hofftech.omni.shipping.services.packing.DensePackingAlgorithm;
 import ru.hofftech.omni.shipping.services.packing.EvenDistributionPackingAlgorithm;
 import ru.hofftech.omni.shipping.services.packing.OptimizedPackingAlgorithm;
@@ -197,6 +199,16 @@ public class ShippingApp {
         System.err.println("Алгоритмы для pack: simple, optimized, even, dense");
     }
 
+    private static PackingAlgorithm resolveAlgorithm(String algorithmType) {
+        return switch (algorithmType.toLowerCase()) {
+            case "optimized" -> new OptimizedPackingAlgorithm();
+            case "even" -> new EvenDistributionPackingAlgorithm();
+            case "dense" -> new DensePackingAlgorithm();
+            case "simple" -> new SimplePackingAlgorithm();
+            default -> throw new IllegalArgumentException("Неизвестный алгоритм: " + algorithmType);
+        };
+    }
+
     interface Command {
         String name();
 
@@ -265,15 +277,6 @@ public class ShippingApp {
             }
         }
 
-        private PackingAlgorithm resolveAlgorithm(String algorithmType) {
-            return switch (algorithmType.toLowerCase()) {
-                case "optimized" -> new OptimizedPackingAlgorithm();
-                case "even" -> new EvenDistributionPackingAlgorithm();
-                case "dense" -> new DensePackingAlgorithm();
-                case "simple" -> new SimplePackingAlgorithm();
-                default -> throw new IllegalArgumentException("Неизвестный алгоритм: " + algorithmType);
-            };
-        }
     }
 
     static class SplitCommand implements Command {
@@ -326,8 +329,11 @@ public class ShippingApp {
             String name = require(flags, "-name");
             String form = require(flags, "-form");
 
-            ru.hofftech.omni.shipping.services.PackageRepository repo =
-                    new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+            PackageRepository repo =
+                    new PackageRepository(
+                            Path.of("test-input.txt"),
+                            new NamedPackageTextFormatService()
+                    );
 
             Package pkg = parsePackageFromForm(name, form);
             repo.create(pkg);
@@ -349,8 +355,11 @@ public class ShippingApp {
         @Override
         public void execute(String[] args) throws Exception {
             String name = stripQuotes(args[0].trim());
-            ru.hofftech.omni.shipping.services.PackageRepository repo =
-                    new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+            PackageRepository repo =
+                    new PackageRepository(
+                            Path.of("test-input.txt"),
+                            new NamedPackageTextFormatService()
+                    );
 
             Package pkg = repo.findByName(name)
                     .orElseThrow(() -> new IllegalArgumentException("Посылка '" + name + "' не найдена"));
@@ -372,8 +381,11 @@ public class ShippingApp {
         @Override
         public void execute(String[] args) throws Exception {
             String name = stripQuotes(args[0].trim());
-            ru.hofftech.omni.shipping.services.PackageRepository repo =
-                    new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+            PackageRepository repo =
+                    new PackageRepository(
+                            Path.of("test-input.txt"),
+                            new NamedPackageTextFormatService()
+                    );
 
             boolean deleted = repo.delete(name);
             if (!deleted) {
@@ -446,7 +458,7 @@ public class ShippingApp {
             form = form.substring(0, form.length() - 1);
         }
         String[] lines = form.split("\\R", -1);
-        List<String> shape = new java.util.ArrayList<>();
+        List<String> shape = new ArrayList<>();
         for (String line : lines) {
             if (line.isEmpty()) continue;
             shape.add(line);
@@ -461,7 +473,7 @@ public class ShippingApp {
             width = Math.max(width, line.length());
         }
 
-        List<String> normalized = new java.util.ArrayList<>(height);
+        List<String> normalized = new ArrayList<>(height);
         for (String line : shape) {
             StringBuilder sb = new StringBuilder(line);
             while (sb.length() < width) sb.append(' ');
@@ -543,7 +555,7 @@ public class ShippingApp {
                     throw new IllegalArgumentException("Для -out json-file нужно указать -out-filename");
                 }
                 Path outPath = Path.of(outFilename);
-                TrucksJsonFileService service = new TrucksJsonFileService();
+                TrucksJsonFileService service = new TrucksJsonFileService(new ObjectMapper());
                 service.write(outPath, toLoadDtos(truckSpecs, trucks));
                 System.out.println(outFilename);
                 return;
@@ -552,15 +564,6 @@ public class ShippingApp {
             throw new IllegalArgumentException("Неизвестный формат вывода -out: " + out);
         }
 
-        private PackingAlgorithm resolveAlgorithm(String algorithmType) {
-            return switch (algorithmType.toLowerCase()) {
-                case "optimized" -> new OptimizedPackingAlgorithm();
-                case "even" -> new EvenDistributionPackingAlgorithm();
-                case "dense" -> new DensePackingAlgorithm();
-                case "simple" -> new SimplePackingAlgorithm();
-                default -> throw new IllegalArgumentException("Неизвестный алгоритм: " + algorithmType);
-            };
-        }
     }
 
     static class UnloadCommand implements Command {
@@ -582,7 +585,7 @@ public class ShippingApp {
             Path inFile = Path.of(require(flags, "-infile"));
             Path outFile = Path.of(require(flags, "-outfile"));
 
-            TrucksJsonFileService service = new TrucksJsonFileService();
+            TrucksJsonFileService service = new TrucksJsonFileService(new ObjectMapper());
             List<TrucksJsonFileService.TruckLoadDto> trucks = service.read(inFile);
 
             if (withCount) {
@@ -678,8 +681,11 @@ public class ShippingApp {
     }
 
     private static List<Package> loadParcelsFromDb(List<String> names) throws IOException {
-        ru.hofftech.omni.shipping.services.PackageRepository repo =
-                new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+        PackageRepository repo =
+                new PackageRepository(
+                        Path.of("test-input.txt"),
+                        new NamedPackageTextFormatService()
+                );
 
         List<Package> parcels = new ArrayList<>();
         Set<String> missing = new LinkedHashSet<>();
@@ -716,8 +722,11 @@ public class ShippingApp {
             return packages;
         }
 
-        ru.hofftech.omni.shipping.services.PackageRepository repo =
-                new ru.hofftech.omni.shipping.services.PackageRepository(Path.of("test-input.txt"));
+        PackageRepository repo =
+                new PackageRepository(
+                        Path.of("test-input.txt"),
+                        new NamedPackageTextFormatService()
+                );
         Map<String, Package> dbByName = repo.loadAll();
         Map<String, List<String>> shapeToNames = new LinkedHashMap<>();
         for (Package dbPkg : dbByName.values()) {

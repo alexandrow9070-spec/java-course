@@ -2,12 +2,11 @@ package ru.hofftech.omni.shipping.services;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
@@ -25,10 +24,6 @@ import java.util.List;
 public class TrucksJsonFileService {
     private final ObjectMapper objectMapper;
 
-    public TrucksJsonFileService() {
-        this(new ObjectMapper());
-    }
-
     public TrucksJsonFileService(ObjectMapper objectMapper) {
         this.objectMapper = objectMapper;
     }
@@ -38,12 +33,8 @@ public class TrucksJsonFileService {
     }
 
     public List<TruckLoadDto> read(Path inputFile) throws IOException {
-        TruckLoadDto[] arr = objectMapper.readValue(inputFile.toFile(), TruckLoadDto[].class);
-        List<TruckLoadDto> list = new ArrayList<>();
-        if (arr != null) {
-            java.util.Collections.addAll(list, arr);
-        }
-        return list;
+        return objectMapper.readValue(inputFile.toFile(), new TypeReference<List<TruckLoadDto>>() {
+        });
     }
 
     public record TruckLoadDto(

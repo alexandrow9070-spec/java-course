@@ -2,6 +2,7 @@ package ru.hofftech.omni.shipping.services.packing;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 import ru.hofftech.omni.shipping.entities.Package;
 import ru.hofftech.omni.shipping.entities.Truck;
 import ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
@@ -12,6 +13,7 @@ import java.util.List;
 /**
  * Равномерная погрузка по машинам (round-robin по доступным кузовам)
  */
+@Component
 public class EvenDistributionPackingAlgorithm implements PackingAlgorithm {
 
     private static final Logger logger = LoggerFactory.getLogger(EvenDistributionPackingAlgorithm.class);

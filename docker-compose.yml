@@ -1,0 +1,33 @@
+version: "3.9"
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: shipping
+      POSTGRES_USER: shipping
+      POSTGRES_PASSWORD: shipping
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  bot:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+      TELEGRAM_ALLOWED_CHAT_ID: ${TELEGRAM_ALLOWED_CHAT_ID}
+    command: [ "java","-Dloader.main=ru.hofftech.omni.shipping.TelegramShippingBotApp","-cp","/app/app.jar","org.springframework.boot.loader.launch.PropertiesLauncher" ]
+  app:
+    build: .
+    depends_on:
+      - postgres
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/shipping
+      SPRING_DATASOURCE_USERNAME: shipping
+      SPRING_DATASOURCE_PASSWORD: shipping
+    ports:
+      - "8080:8080"
+
+volumes:
+  pgdata:

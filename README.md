@@ -1,402 +1,207 @@
-# Упаковка посылок в кузовы грузовиков
+# Shipping Service
 
-CLI-проект на Java для операций:
+Сервис упаковки посылок на Spring Boot с тремя интерфейсами:
 
-- управление базой посылок (создать/найти/удалить);
-- погрузка посылок в кузовы (`pack`, `load`);
-- выгрузка списка посылок из результата погрузки (`split`, `unload`);
-- управление через Telegram-бота (команды из чата).
+- REST API (`/api/parcels`, `/api/commands/*`);
+- Spring Shell (консольные команды);
+- Telegram-бот.
 
-## Возможности
+Проект использует:
 
-- 4 алгоритма погрузки: `simple`, `optimized`, `even`, `dense`;
-- валидация входных посылок перед погрузкой;
-- сохранение результата погрузки в JSON (2 формата: старый `pack` и новый для `load/unload`);
-- восстановление посылок из JSON (`split`) и получение списка посылок из JSON (`unload`);
-- база посылок в `test-input.txt` с уникальными названиями;
-- добавление/просмотр/удаление посылок в базе (`createpackage`, `findpackage`, `deletepackage`);
-- погрузка по названиям посылок (загрузить то, чего нет в базе — нельзя);
-- Telegram-бот для команд `createpackage`, `findpackage`, `deletepackage`, `load`, `unload`;
-- запуск через Gradle и через исполняемый fat jar.
+- Spring Data JPA + PostgreSQL;
+- Flyway для миграций;
+- OpenAPI/Swagger для документации;
+- Docker Compose для локального окружения.
 
-## Структура (основное)
+## Что умеет
 
-```text
-src/main/java/ru/hofftech/omni/shipping
-├── ShippingApp.java                 # единый CLI (pack/split/create/find/delete/load/unload)
-├── TelegramShippingBotApp.java      # Telegram long-polling бот
-├── entities
-│   ├── Package.java
-│   └── Truck.java
-├── interfaces
-│   └── PackingAlgorithm.java
-└── services
-    ├── PackageLoader.java
-    ├── PackageRepository.java
-    ├── PackageValidator.java
-    ├── PackageTextFormatService.java   # текстовый формат посылок
-    ├── NamedPackageTextFormatService.java
-    ├── PackingResultJsonService.java   # только JSON
-    ├── TrucksJsonFileService.java      # JSON для load/unload
-    └── packing
-        ├── SimplePackingAlgorithm.java
-        ├── OptimizedPackingAlgorithm.java
-        ├── EvenDistributionPackingAlgorithm.java
-        └── DensePackingAlgorithm.java
-```
+- CRUD посылок по имени;
+- пагинация списка посылок;
+- 4 алгоритма упаковки: `simple`, `optimized`, `even`, `dense`;
+- команды погрузки/выгрузки через REST и Shell;
+- Telegram-команды для основных операций.
 
-## Требования
+## Технологии
 
-- JDK 18+
-- рекомендуется использовать Gradle Wrapper (`gradlew`, `gradlew.bat`)
-- консоль с UTF-8
-- для Telegram-бота нужен токен Telegram Bot API
+- Java 18
+- Spring Boot 3.3.5
+- Spring Web
+- Spring Data JPA
+- Spring Shell
+- Flyway
+- springdoc-openapi
+- PostgreSQL 16
 
 ## Быстрый старт
 
-### Сборка
+### Локально (без Docker)
 
-```bash
-./gradlew build
-```
-
-Windows:
+1. Подними PostgreSQL и создай БД `shipping`.
+2. Укажи параметры подключения через env-переменные:
 
 ```powershell
-.\gradlew.bat build
+$env:SPRING_DATASOURCE_URL="jdbc:postgresql://localhost:5432/shipping"
+$env:SPRING_DATASOURCE_USERNAME="shipping"
+$env:SPRING_DATASOURCE_PASSWORD="shipping"
 ```
 
-### Запуск тестов
+3. Запусти приложение:
+
+```powershell
+.\gradlew.bat bootRun
+```
+
+Flyway применит миграции автоматически при старте.
+
+### Через Docker Compose
+
+В корне проекта:
+
+```powershell
+docker compose up --build
+```
+
+Это поднимет:
+
+- `postgres` — база данных;
+- `app` — REST + Shell;
+- `bot` — Telegram-бот (если заданы переменные).
+
+Остановить:
+
+```powershell
+docker compose down
+```
+
+Сбросить БД (вместе с volume):
+
+```powershell
+docker compose down -v
+```
+
+## Переменные окружения
+
+### Для приложения
+
+- `SPRING_DATASOURCE_URL` (по умолчанию `jdbc:postgresql://localhost:5432/shipping`)
+- `SPRING_DATASOURCE_USERNAME` (по умолчанию `shipping`)
+- `SPRING_DATASOURCE_PASSWORD` (по умолчанию `shipping`)
+
+### Для Telegram-бота
+
+- `TELEGRAM_BOT_TOKEN` — обязательно
+- `TELEGRAM_ALLOWED_CHAT_ID` — опционально, но рекомендуется
+
+### `.env` для Docker Compose
+
+Создай файл `.env` рядом с `docker-compose.yml`:
+
+```env
+TELEGRAM_BOT_TOKEN=123456:abc...
+TELEGRAM_ALLOWED_CHAT_ID=123456789
+```
+
+## Где смотреть API
+
+- Swagger UI: `http://localhost:8080/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8080/api-docs`
+
+## REST API (основные эндпоинты)
+
+### Посылки
+
+- `POST /api/parcels` — создать посылку
+- `GET /api/parcels/{name}` — получить по имени
+- `DELETE /api/parcels/{name}` — удалить
+- `GET /api/parcels?page=0&size=20` — список с пагинацией
+
+### Команды
+
+- `POST /api/commands/pack`
+- `POST /api/commands/load`
+- `POST /api/commands/unload`
+
+## Примеры `curl`
+
+### Создать посылку
 
 ```bash
-./gradlew test
+curl -X POST "http://localhost:8080/api/parcels" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "test4x4",
+    "shape": ["oooo", "o  o", "o  o", "oooo"]
+  }'
 ```
 
-Windows:
+### Список посылок с пагинацией
+
+```bash
+curl "http://localhost:8080/api/parcels?page=0&size=10"
+```
+
+### Pack-команда
+
+```bash
+curl -X POST "http://localhost:8080/api/commands/pack" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "parcelNames": ["test3x3", "test3x2"],
+    "truckWidth": 6,
+    "truckHeight": 6,
+    "algorithm": "dense",
+    "maxTrucks": 10
+  }'
+```
+
+## Spring Shell команды
+
+После старта приложения доступны:
+
+- `createpackage --name <name> --form <form>`
+- `findpackage --name <name>`
+- `deletepackage --name <name>`
+- `listpackages --page 0 --size 20`
+- `pack --parcels <a,b> --truckWidth <w> --truckHeight <h> --algorithm <code> --maxTrucks <n>`
+- `load --parcels <a,b> --trucks "<w>x<h> <w>x<h>" --algorithm <code>`
+- `unload --withCount true|false`
+
+## Telegram-бот
+
+Сервис `bot` в `docker-compose.yml` запускает `TelegramShippingBotApp`.
+
+Запуск только бота:
+
+```powershell
+docker compose up --build bot
+```
+
+Запуск вместе с API и БД:
+
+```powershell
+docker compose up --build
+```
+
+## Flyway и данные в БД
+
+- миграции: `src/main/resources/db/migration`
+- при старте приложения выполняются автоматически
+
+Проверить примененные миграции:
+
+```powershell
+docker compose exec postgres psql -U shipping -d shipping -c "select * from flyway_schema_history order by installed_rank;"
+```
+
+Проверить посылки:
+
+```powershell
+docker compose exec postgres psql -U shipping -d shipping -c "select name,width,height from parcels;"
+```
+
+## Тесты и сборка
 
 ```powershell
 .\gradlew.bat test
-```
-
-## Запуск через Gradle
-
-### 1) Запуск CLI через `ShippingApp` (Gradle `run`)
-
-```bash
-./gradlew run --args="pack <путь_к_файлу> <ширина_кузова> <высота_кузова> <алгоритм> <количество_машин> [json_файл_результата]"
-```
-
-Пример:
-
-```bash
-./gradlew run --args="pack test-input.txt 6 6 dense 10 result.json"
-```
-
-### 2) CLI через задачу `Shipping`
-
-```bash
-./gradlew Shipping --args="pack <путь_к_файлу> <ширина_кузова> <высота_куzова> <алгоритм> <количество_машин> [json_файл_результата]"
-./gradlew Shipping --args="split <json_вход> <файл_посылок_выход>"
-./gradlew Shipping --args="createpackage -name <name> -form <form>"
-./gradlew Shipping --args="findpackage <name>"
-./gradlew Shipping --args="deletepackage <name>"
-./gradlew Shipping --args="load -parcels-text <names> -trucks <sizes> -type <algo> -out <text|json-file> [-out-filename <file>]"
-./gradlew Shipping --args="load -parcels-file <parcels.csv> -trucks <sizes> -type <algo> -out <text|json-file> [-out-filename <file>]"
-./gradlew Shipping --args="unload -infile <trucks.json> -outfile <parcels.csv> [--withcount]"
-```
-
-Примеры:
-
-```bash
-./gradlew Shipping --args="pack test-input.txt 6 6 optimized 10 result.json"
-./gradlew Shipping --args="split result.json packages.txt"
-```
-
-Windows:
-
-```powershell
-.\gradlew.bat Shipping --args="pack test-input.txt 6 6 optimized 10 result.json"
-.\gradlew.bat Shipping --args="split result.json packages.txt"
-
-# база посылок
-.\gradlew.bat Shipping --args="createpackage -name test4x4 -form oooo\no  o\no  o\noooo\n"
-.\gradlew.bat Shipping --args="findpackage test4x4"
-.\gradlew.bat Shipping --args="deletepackage test4x4"
-
-# load/unload
-.\gradlew.bat Shipping --args="load -parcels-text test3x3,test3x2 -trucks 3x3 4x4 -type simple -out text"
-.\gradlew.bat Shipping --args="load -parcels-file parcels.csv -trucks 3x3 4x4 -type simple -out json-file -out-filename trucks.json"
-.\gradlew.bat Shipping --args="unload -infile trucks.json -outfile parcels.csv"
-.\gradlew.bat Shipping --args="unload -infile trucks.json -outfile parcels-with-count.csv --withcount"
-```
-
-### 3) Telegram-бот (`TelegramBot`)
-
-Бот поддерживает команды из чата:
-
-- `createpackage`
-- `findpackage`
-- `deletepackage`
-- `load`
-- `unload`
-
-Бот читает настройки из файла `.env` в корне проекта:
-
-```env
-TELEGRAM_BOT_TOKEN=
-TELEGRAM_ALLOWED_CHAT_ID=
-```
-
-Также можно задать переменные окружения — они имеют приоритет над `.env`:
-
-- `TELEGRAM_BOT_TOKEN` — токен бота (обязательно);
-- `TELEGRAM_ALLOWED_CHAT_ID` — id чата, которому разрешён доступ (опционально, но рекомендуется).
-
-Запуск:
-
-```powershell
-$env:TELEGRAM_BOT_TOKEN="123456:abc..."
-$env:TELEGRAM_ALLOWED_CHAT_ID="123456789"
-.\gradlew.bat TelegramBot
-```
-
-Примеры сообщений боту:
-
-```text
-/findpackage "test3x3"
-/createpackage -name "test4x4" -form "oooo\no  o\no  o\noooo\n"
-/load -parcels-text "test3x3,test3x2" -trucks "3x3 4x4" -type "simple" -out text
-/unload -infile "trucks.json" -outfile "parcels.csv"
-```
-
-Дополнительно:
-
-- можно писать как с `/`, так и без него (`/findpackage ...` и `findpackage ...`);
-- `/start` и `/help` показывают список поддерживаемых команд;
-- если задан `TELEGRAM_ALLOWED_CHAT_ID`, бот отвечает только этому чату.
-
-## Запуск без Gradle (через jar)
-
-В проекте есть задача `fatJar`, которая собирает исполняемый jar со всеми зависимостями.
-
-### Сборка jar
-
-```bash
-./gradlew fatJar
-```
-
-Windows:
-
-```powershell
-.\gradlew.bat fatJar
-```
-
-Артефакт:
-
-```text
-build/libs/java-course-1.0-SNAPSHOT-all.jar
-```
-
-### Запуск jar
-
-```bash
-java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar pack test-input.txt 6 6 optimized 10 result.json
-java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar split result.json packages.txt
-java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar load -parcels-text "test3x3,test3x2" -trucks "3x3 4x4" -type simple -out json-file -out-filename trucks.json
-java -jar build/libs/java-course-1.0-SNAPSHOT-all.jar unload -infile trucks.json -outfile parcels.csv --withcount
-```
-
-Запуск Telegram-бота из fat jar:
-
-```bash
-TELEGRAM_BOT_TOKEN=123456:abc... TELEGRAM_ALLOWED_CHAT_ID=123456789 java -cp build/libs/java-course-1.0-SNAPSHOT-all.jar ru.hofftech.omni.shipping.TelegramShippingBotApp
-```
-
-## Аргументы команды `pack`
-
-- `<путь_к_файлу>` — файл с посылками;
-- `<ширина_кузова>` — ширина кузова;
-- `<высота_кузова>` — высота кузова;
-- `<алгоритм>` — `simple` | `optimized` | `even` | `dense`;
-- `<количество_машин>` — максимальное число доступных кузовов;
-- `[json_файл_результата]` — опциональный путь для сохранения JSON.
-
-## Аргументы команды `split`
-
-- `<json_вход>` — JSON-файл результата погрузки;
-- `<файл_посылок_выход>` — выходной текстовый файл посылок.
-
-## База посылок (`test-input.txt`)
-
-Файл `test-input.txt` — это база посылок. У каждой посылки есть **уникальное имя**.
-
-Формат:
-
-- первая строка блока: `<name>:`
-- далее несколько строк формы (символы, пробелы допускаются)
-- блоки разделены пустой строкой
-
-Пример:
-
-```text
-test3x3:
-ooo
-ooo
-ooo
-
-test3x2:
-ooo
-ooo
-
-test5x1:
-ooooo
-
-test1x1:
-o
-```
-
-## Команды базы посылок
-
-### `createpackage`
-
-Вход:
-
-```text
-createpackage -name "test4x4" -form "oooo\no  o\no  o\noooo\n"
-```
-
-Выход:
-
-```text
-id(name): "test4x4"
-form:
-oooo
-o  o
-o  o
-oooo
-```
-
-### `findpackage`
-
-Вход:
-
-```text
-findpackage "test4x4"
-```
-
-Выход аналогичен `createpackage`.
-
-### `deletepackage`
-
-Вход:
-
-```text
-deletepackage "test4x4"
-```
-
-Выход:
-
-```text
-Посылка "test4x4" удалена.
-```
-
-## Команда `load`
-
-Погрузка по **названиям** посылок из базы. Если посылки нет в базе — погрузка невозможна.
-
-### Вариант 1: погрузка через текст
-
-```text
-load -parcels-text "test3x3,test3x2" -trucks "3x3 4x4" -type "simple" -out text
-```
-
-### Вариант 2: погрузка через файл
-
-Файл `parcels.csv`:
-
-```text
-"test3x3"
-"test3x2"
-```
-
-Команда:
-
-```text
-load -parcels-file "parcels.csv" -trucks "3x3 4x4" -type "simple" -out json-file -out-filename "trucks.json"
-```
-
-JSON (`trucks.json`) создаётся в формате:
-
-```json
-[
-  {
-    "truck_type": "3x3",
-    "parcels": [
-      {
-        "name": "test3x3",
-        "coordinates": [[0, 0]]
-      }
-    ]
-  }
-]
-```
-
-## Команда `unload`
-
-Выгружает список посылок из `trucks.json`:
-
-- **без подсчёта**:
-
-```text
-unload -infile "trucks.json" -outfile "parcels.csv"
-```
-
-Результат `parcels.csv`:
-
-```text
-"test3x3"
-"test3x2"
-```
-
-- **с подсчётом**:
-
-```text
-unload -infile "trucks.json" -outfile "parcels-with-count.csv" --withcount
-```
-
-Результат `parcels-with-count.csv`:
-
-```text
-"test3x3";1
-"test3x2";1
-```
-
-## Правила размещения
-
-- посылки не вращаются;
-- посылки не должны "висеть в воздухе";
-- опора под основанием должна быть больше половины;
-- размеры посылки не должны превышать размеры кузова.
-
-## Алгоритмы
-
-- `simple` — по сути одна посылка на кузов;
-- `optimized` — пытается разместить больше посылок в имеющихся кузовах;
-- `even` — распределяет посылки равномерно по кузовам;
-- `dense` — стремится к максимально плотной упаковке и минимальному числу кузовов.
-
-## Пример результата
-
-```text
-Результат упаковки (Оптимизированный алгоритм):
-Использовано кузовов: 1
-
-Кузов #1:
-++++++++
-+333   +
-+55555 +
-+99911 +
-+999666+
-+999666+
-++++++++
+.\gradlew.bat clean bootJar
 ```

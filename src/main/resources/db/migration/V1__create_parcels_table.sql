@@ -1,0 +1,7 @@
+CREATE TABLE parcels (
+    id BIGSERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE,
+    width INTEGER NOT NULL,
+    height INTEGER NOT NULL,
+    shape TEXT NOT NULL
+);

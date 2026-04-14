@@ -9,11 +9,13 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 /**
  * Оптимизированный алгоритм: пытается разместить несколько посылок в один кузов
  */
- public class OptimizedPackingAlgorithm implements PackingAlgorithm {
+@Component
+public class OptimizedPackingAlgorithm implements PackingAlgorithm {
     private static final Logger logger = LoggerFactory.getLogger(OptimizedPackingAlgorithm.class);
 
     @Override

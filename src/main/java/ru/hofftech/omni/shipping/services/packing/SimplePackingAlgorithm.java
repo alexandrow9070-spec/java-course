@@ -9,11 +9,13 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 /**
  * Простой алгоритм: одна посылка - одна машина
  */
- public class SimplePackingAlgorithm implements PackingAlgorithm {
+@Component
+public class SimplePackingAlgorithm implements PackingAlgorithm {
     private static final Logger logger = LoggerFactory.getLogger(SimplePackingAlgorithm.class);
 
     @Override

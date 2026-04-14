@@ -64,7 +64,7 @@ public class PackingResultJsonService {
 
         for (TruckDto truckDto : dto.trucks()) {
             for (PackageDto pkgDto : truckDto.packages()) {
-                result.add(new Package(pkgDto.width(), pkgDto.height(), pkgDto.shape()));
+                result.add(new Package(pkgDto.name(), pkgDto.width(), pkgDto.height(), pkgDto.shape()));
             }
         }
 
@@ -79,7 +79,7 @@ public class PackingResultJsonService {
         for (Truck truck : trucks) {
             List<PackageDto> packageDtos = new ArrayList<>();
             for (Package pkg : truck.getPackages()) {
-                packageDtos.add(new PackageDto(pkg.getTruckId(), pkg.getX(), pkg.getY(),
+                packageDtos.add(new PackageDto(pkg.getName(), pkg.getTruckId(), pkg.getX(), pkg.getY(),
                         pkg.getWidth(), pkg.getHeight(), pkg.getShape()));
             }
             truckDtos.add(new TruckDto(truck.getId(), packageDtos));
@@ -110,6 +110,7 @@ public class PackingResultJsonService {
     }
 
     private record PackageDto(
+            @JsonProperty("name") String name,
             @JsonProperty("truckId") int truckId,
             @JsonProperty("x") int x,
             @JsonProperty("y") int y,

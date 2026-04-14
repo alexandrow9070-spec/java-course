@@ -37,25 +37,31 @@ test {
 
 application {
     // Главный класс приложения
-    mainClass = 'ru.hofftech.omni.shipping.ShippingApp'
-
+    mainClass = 'ru.hofftech.omni.shipping.Shipping'
 }
 
 run {
     args 'test-input.txt', 6, 6, 'optimized', 10
 }
 
-tasks.register('runJsonToPackages', JavaExec) {
+tasks.register('Shipping', JavaExec) {
     group = 'application'
-    description = 'Конвертирует JSON с результатом погрузки в текстовый файл с посылками'
+    description = 'Таска для работы с посылками/погрузками/разгрузками'
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = 'ru.hofftech.omni.shipping.JsonToPackagesApp'
+    mainClass = 'ru.hofftech.omni.shipping.ShippingApp'
+}
+
+tasks.register('TelegramBot', JavaExec) {
+    group = 'application'
+    description = 'Запускает Telegram-бота для команд shipping'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'ru.hofftech.omni.shipping.TelegramShippingBotApp'
 }
 
 jar {
     manifest {
         attributes(
-                'Main-Class': 'ru.hofftech.omni.shipping.JsonToPackagesApp'
+                'Main-Class': 'ru.hofftech.omni.shipping.ShippingApp'
         )
     }
 }
@@ -68,7 +74,7 @@ tasks.register('fatJar', Jar) {
 
     manifest {
         attributes(
-                'Main-Class': 'ru.hofftech.omni.shipping.JsonToPackagesApp'
+                'Main-Class': 'ru.hofftech.omni.shipping.ShippingApp'
         )
     }
 

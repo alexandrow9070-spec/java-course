@@ -2,11 +2,11 @@ package ru.hofftech.omni.shipping.entities;
 
 import java.util.ArrayList;
 import java.util.List;
-
 /**
  * Класс для представления посылки
  */
 public class Package {
+    private final String name;
     private final int width;
     private final int height;
     private final List<String> shape;
@@ -15,12 +15,21 @@ public class Package {
     private int truckId; // ID кузова, в который помещена посылка
 
     public Package(int width, int height, List<String> shape) {
+        this(null, width, height, shape);
+    }
+
+    public Package(String name, int width, int height, List<String> shape) {
+        this.name = name;
         this.width = width;
         this.height = height;
         this.shape = new ArrayList<>(shape);
         this.x = -1;
         this.y = -1;
         this.truckId = -1;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public int getWidth() {
@@ -127,6 +136,9 @@ public class Package {
 
     @Override
     public String toString() {
+        if (name != null && !name.isBlank()) {
+            return String.format("Package(%s, %dx%d)", name, width, height);
+        }
         return String.format("Package(%dx%d)", width, height);
     }
 }

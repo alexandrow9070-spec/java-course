@@ -2,6 +2,7 @@ package ru.hofftech.omni.shipping.services.packing;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 import ru.hofftech.omni.shipping.entities.Package;
 import ru.hofftech.omni.shipping.entities.Truck;
 import ru.hofftech.omni.shipping.interfaces.PackingAlgorithm;
@@ -15,6 +16,7 @@ import java.util.List;
  * сортируем посылки по площади и жадно размещаем в уже созданных кузовах,
  * создавая новый кузов только при необходимости.
  */
+@Component
 public class DensePackingAlgorithm implements PackingAlgorithm {
 
     private static final Logger logger = LoggerFactory.getLogger(DensePackingAlgorithm.class);
